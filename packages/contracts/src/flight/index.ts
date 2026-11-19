@@ -1,12 +1,13 @@
 // @fb/contracts/flight: flight-core public interface types, global constants (CONTRACT-v1 §3) and the
-// transliteration table. Types and constants only: no implementation, no IO, no imports (T01 / T03 split).
-// Sources: A-02 §7.1, §7.2, §7.6; CONTRACT-v1 §3.
+// transliteration table. Types and constants only: no implementation, no IO, type-only import of the web entry (T01 / T03 split).
+// Sources: A-02 §7.1, §7.2, §7.6; CONTRACT-v1 §3. May import the web entry only (M-11).
+import type { Quote } from '../web/index.ts';
 
 // ---------------------------------------------------------------------------------------------
 // Global constants (CONTRACT-v1 §3). Every implementation must import these, never hard-code them.
 // ---------------------------------------------------------------------------------------------
 
-/** Price per kilometre in USD (assignment). Integer-cent form: {@link PRICE_CENTS_PER_KM}. */
+/** Price per kilometre in USD (assignment). The only copy (M-13). Integer-cent form: {@link PRICE_CENTS_PER_KM}. */
 export const PRICE_PER_KM_USD = 0.13;
 /** `priceCents = roundHalfUp(totalDistanceKm * PRICE_CENTS_PER_KM)` (A-02 §7.6). */
 export const PRICE_CENTS_PER_KM = 13;
@@ -65,9 +66,7 @@ export const MODEL_STRICT_TOOLS = false as const;
 /**
  * Letters NFKD cannot decompose (R-01 §4). Case is preserved here; `norm` lowercases afterwards so
  * both capital and small forms end up identical.
- * TODO(T01-REVIEW): the task brief lists 11 entries; A-02 §7.1 step 2 additionally lists Œ, ð, ı, ħ.
- * The four extras are included here (A-02 is the normative source for norm). Confirm. Capital Ð / Ħ /
- * Þ are in neither list; add them if the golden test (711 names, only San Jose/San José collide) needs.
+ * M-19: union of the task-brief list and A-02 §7.1 step 2 (Œ, ð, ı, ħ), plus the capitals Ð, Ħ, Þ.
  */
 export const TRANSLITERATION_TABLE: Readonly<Record<string, string>> = {
   ø: 'o',
@@ -81,9 +80,12 @@ export const TRANSLITERATION_TABLE: Readonly<Record<string, string>> = {
   ß: 'ss',
   đ: 'd',
   Đ: 'D',
+  Ð: 'D',
   ð: 'd',
+  Þ: 'TH',
   þ: 'th',
   ı: 'i',
+  Ħ: 'H',
   ħ: 'h',
 };
 
@@ -106,43 +108,17 @@ export interface City {
   readonly connectedHubs: readonly string[];
 }
 
-/** Distance of one flight leg: unrounded float64 km (internal), never rounded for arithmetic. */
-export interface Leg {
-  readonly from: string;
-  readonly to: string;
-  readonly distanceKm: number;
-}
+/** Distance of one flight leg: unrounded float64 km (internal), never rounded for arithmetic. Same shape as the web QuoteLeg. */
+export type Leg = Quote['legs'][number];
 
-/** Display strings; distance 2 decimals, price = priceCents / 100 with 2 decimals. */
-export interface RouteDisplay {
-  readonly legs: readonly string[];
-  readonly totalDistanceKm: string;
-  readonly priceUsd: string;
-}
+/** Display strings; distance 2 decimals, price = priceCents / 100 with 2 decimals. Same shape as the web QuoteDisplay. */
+export type RouteDisplay = Quote['display'];
 
-/** Pure computation result of a route query (no id, no timestamp). */
-export interface Route {
-  readonly from: string;
-  readonly to: string;
-  readonly legs: readonly Leg[];
-  /** Intermediate cities (always hubs). */
-  readonly transferCities: readonly string[];
-  /** Sum of raw leg distances, not rounded. */
-  readonly totalDistanceKm: number;
-  /** `roundHalfUp(totalDistanceKm * 13)` */
-  readonly priceCents: number;
-  readonly display: RouteDisplay;
-}
-
-/** A persisted, immutable quote (A-02 §7.2 data). */
-export interface Quote extends Route {
-  /** `q_<ULID>` */
-  readonly quoteId: string;
-  /** Must equal {@link LOCATIONS_DB_SHA256}. */
-  readonly dataSha256: string;
-  /** ISO-8601 */
-  readonly createdAt: string;
-}
+/**
+ * Pure computation result of a route query (no id, no timestamp). M-12: derived from the single web `Quote`;
+ * the persisted Quote (A-02 §7.2) is `Route` + quoteId/dataSha256/createdAt and is defined only in web.
+ */
+export type Route = Omit<Quote, 'quoteId' | 'dataSha256' | 'createdAt'>;
 
 /** Nearest served city for an unserved one. Distance is a 2-decimal string (e.g. "120.95"). */
 export interface NearestServed {
@@ -178,7 +154,7 @@ export interface ResolveResult {
   readonly status: ResolveStatus;
   /** At most 5 entries. */
   readonly matches: readonly CityMatch[];
-  /** TODO(T01-REVIEW): A-02 §7.1 gives no value of matchedBy for `not_found`; typed optional. */
+  /** M-19: A-02 §7.1 gives no matchedBy for `not_found`; optional. */
   readonly matchedBy?: MatchedBy;
 }
 
@@ -197,9 +173,8 @@ export type RouteResult =
 /**
  * flight-core public surface. Signatures only (T03 implements; T04 cross-checks with another algorithm).
  * Pure and synchronous after construction; loading/hash verification happens in the factory, not here.
- * TODO(T01-REVIEW): A-02 §7 does not define the exact TS surface of flight-core; this shape is derived
- * from §7.1/§7.2/§7.6 and is the T01 proposal. `normalize` is exposed because save_preference and
- * quote_route share `norm`.
+ * M-19: surface kept as drafted; T03 reports back if it needs a change. `normalize` is exposed because
+ * save_preference and quote_route share `norm`.
  */
 export interface FlightCore {
   /** `norm(s)` per the pipeline above. */

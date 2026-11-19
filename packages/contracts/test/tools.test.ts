@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import type { TSchema } from 'typebox';
 import { Value } from 'typebox/value';
+import { ErrorCode } from '../src/web/index.ts';
+import * as tools from '../src/tools/index.ts';
 import {
   AGENT_ERROR_CODES,
   ALL_TOOLS,
@@ -12,13 +15,13 @@ import {
   ResolveCityParams,
   SavePreferenceParams,
   SYS_CALL_PREFIX,
-  quoteOfferedIdempotencyKey,
-  toolResultMessageKey,
+  ListMyTicketsData,
+  QuoteRouteData,
 } from '../src/tools/index.ts';
 
-const check = (schema: Parameters<typeof Value.Check>[0], v: unknown) => Value.Check(schema, v);
+const check = (schema: TSchema, v: unknown) => Value.Check(schema, v);
 
-const cases: Record<string, { schema: Parameters<typeof Value.Check>[0]; ok: unknown[]; bad: unknown[] }> = {
+const cases: Record<string, { schema: TSchema; ok: unknown[]; bad: unknown[] }> = {
   resolve_city: {
     schema: ResolveCityParams,
     ok: [
@@ -232,8 +235,53 @@ describe('execute envelope', () => {
     expect(new Set(AGENT_ERROR_CODES).size).toBe(AGENT_ERROR_CODES.length);
     expect(AGENT_ERROR_CODES).toHaveLength(19);
   });
-  it('idempotency key builders follow M-6', () => {
-    expect(quoteOfferedIdempotencyKey('run_1', 'call_1')).toBe('offer:run_1:call_1');
-    expect(toolResultMessageKey('run_1', 'call_1')).toBe('msg:tr:run_1:call_1');
+  it('M-12: tools has no key builders (they live in server only)', () => {
+    expect('quoteOfferedIdempotencyKey' in tools).toBe(false);
+    expect('toolResultMessageKey' in tools).toBe(false);
+  });
+  it('M-12: every agent error code is a member of the single web ErrorCode enum', () => {
+    const all = new Set<string>(Object.values(ErrorCode));
+    for (const c of AGENT_ERROR_CODES) expect(all.has(c)).toBe(true);
+    expect(all.size).toBe(35); // 19 (A-01 §4.6) + 16 agent-only (A-02 §5.3)
+  });
+});
+
+describe('quote_route / list_my_tickets data use the web Quote / TicketView (M-12, M-19)', () => {
+  const quote = {
+    quoteId: 'q_0123456789ABCDEFGHJKMNPQRS',
+    from: 'Shanghai',
+    to: 'Sao Paulo',
+    legs: [
+      { from: 'Shanghai', to: 'Dubai', distanceKm: 8123.4567891 },
+      { from: 'Dubai', to: 'Sao Paulo', distanceKm: 9876.5432109 },
+    ],
+    transferCities: ['Dubai'],
+    totalDistanceKm: 18000,
+    priceCents: 234000,
+    display: { legs: ['8123.46', '9876.54'], totalDistanceKm: '18000.00', priceUsd: '2340.00' },
+    dataSha256: 'f'.repeat(64),
+    createdAt: '2026-11-19T00:00:00.000Z',
+  };
+  const ticket = {
+    ticketId: 't_0123456789ABCDEFGHJKMNPQRS',
+    ticketNo: 'OA-JKMNPQRS',
+    sessionId: '11111111-2222-3333-4444-555555555555',
+    quoteId: quote.quoteId,
+    from: quote.from,
+    to: quote.to,
+    itinerary: quote,
+    priceCents: 234000,
+    bookedAt: '2026-11-19T00:01:00.000Z',
+  };
+  it('quote_route data is exactly a Quote', () => {
+    expect(check(QuoteRouteData, quote)).toBe(true);
+    expect(check(QuoteRouteData, { ...quote, extra: 1 })).toBe(false);
+    expect(check(QuoteRouteData, { ...quote, priceCents: 1.5 })).toBe(false);
+  });
+  it('list_my_tickets data is { tickets: TicketView[], total }', () => {
+    expect(check(ListMyTicketsData, { tickets: [ticket], total: 1 })).toBe(true);
+    expect(check(ListMyTicketsData, { tickets: [], total: 0 })).toBe(true);
+    expect(check(ListMyTicketsData, { tickets: [{ ...ticket, legs: [] }], total: 1 })).toBe(false);
+    expect(check(ListMyTicketsData, { tickets: [{ ...ticket, itinerary: undefined }], total: 1 })).toBe(false);
   });
 });

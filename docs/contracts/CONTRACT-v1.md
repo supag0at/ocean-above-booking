@@ -60,6 +60,7 @@
 | M-18 | 补齐 server 入口 | 增加 `escapeUserText()`，按 A-02 §11.1 转义 `<system_event` 和 `<run_context`，包括大小写变体、全角字符、零宽字符；从 flight 重新导出 `LOCATIONS_DB_SHA256` | A-01 §1.3 要求的内容 |
 | M-19 | 草稿里其他的 TODO | 接受下面这些做法：转写表取两份文档的并集，另外补上 Ð→D、Ħ→H、Þ→TH；`matchedBy` 可选；`list_my_tickets` 返回 `TicketView[]`；save/forget 的返回值是回显；`FlightCore` 的接口先按草稿，T03 实现时如果需要改，就上报；`run_` 前缀用随机串；记忆 ID 的前缀是 `m_`；登录用户名先校验长度 1..64，规范化后再校验 1..32 | 都在规范允许的范围内 |
 | M-20 | 数据库 | 保留 `REVOKE ALL … FROM PUBLIC` 和"先全部 REVOKE 再 GRANT"这两个补充；v1 的迁移和 GRANT 由 `00-roles.sh` 执行，不单独做 migrate 容器；compose 要把 `infra/db` 以只读方式挂进 postgres 容器（`INFRA_DB_DIR`）；密码只在初始化期间出现在容器内部 psql 进程的 argv 里，写进局限一节 | 数据库子块的 TODO |
+| M-21 | 整合时剩下的两处 | `booking.confirmed` 和 `booking.failed` 由 **gateway** 写入（A-01 §5.2、§3.3：booking 没有 events 表的授权，gateway 收到 booking 的同步应答后再写事件）；公共视图里 toolResult 那一支**不加** `kind`，前端按有没有 `toolCallId` 来区分（A-01 §9.4）；`list_my_tickets` 返回 `TicketView[]`；`ExecuteResponse.error.code` 保持为 agent 错误码的子集 | 都按负责方文档的原文 |
 ---
 
 ## 3. 全局常量和口径（T01 写进契约包，所有实现都只能引用这里，不能各自硬编码）

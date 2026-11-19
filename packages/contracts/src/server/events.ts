@@ -1,7 +1,11 @@
 // Internal event envelope + full payload schemas (A-01 §6.1-§6.3, A-02 §2). Backend only.
 // All objects are additionalProperties:false (H-08). Public (browser) views live in @fb/contracts/web, not here.
 import { Type, type Static, type TSchema } from 'typebox';
+import { ErrorCodeSchema, TicketSummarySchema, UUID_PATTERN, type ErrorCode } from '../web/index.ts';
 import { idPattern, ID_PREFIX } from './ids.ts';
+
+// M-12: ErrorCode, TicketSummary and the uuid pattern are defined in web only; re-exported types keep imports short.
+export type { ErrorCode };
 
 const strict = { additionalProperties: false } as const;
 const Str = (opts: Record<string, unknown> = {}) => Type.String({ minLength: 1, ...opts });
@@ -15,51 +19,6 @@ export const QuoteId = Type.String({ pattern: idPattern(ID_PREFIX.quote) });
 export const TicketId = Type.String({ pattern: idPattern(ID_PREFIX.ticket) });
 export const RunId = Type.String({ pattern: idPattern(ID_PREFIX.run) });
 
-// TODO(T01-REVIEW): ErrorCode is specified in A-01 §4.6 + A-02 §5.3 and is meant to live in @fb/contracts/web
-// ("ErrorCode 枚举" in A-01 §1.3). The server entry may not import web, so the union is duplicated here.
-// Decide the single home (e.g. a shared internal module re-exported by both entries) so it cannot drift.
-export const ERROR_CODES = [
-  // A-01 §4.6
-  'AUTH_REQUIRED',
-  'CSRF_INVALID',
-  'FORBIDDEN_PEER',
-  'VALIDATION_FAILED',
-  'PAYLOAD_TOO_LARGE',
-  'SESSION_NOT_FOUND',
-  'QUOTE_NOT_FOUND',
-  'TICKET_NOT_FOUND',
-  'MEMORY_NOT_FOUND',
-  'IDEMPOTENCY_CONFLICT',
-  'QUOTE_NOT_OFFERED',
-  'BOOKING_UNAVAILABLE',
-  'SERVICE_UNAVAILABLE',
-  'FENCE_STALE',
-  'EVENT_TYPE_FORBIDDEN',
-  'EVENT_INVALID',
-  'SERVICE_AUTH_INVALID',
-  'SESSION_INACTIVE',
-  'INTERNAL',
-  // A-02 §5.3 (agent side; same name must mean the same thing)
-  'CITY_NOT_FOUND',
-  'CITY_AMBIGUOUS',
-  'CITY_NOT_SERVED',
-  'SAME_CITY',
-  'NO_ROUTE',
-  'QUOTE_ALREADY_BOOKED',
-  'INVALID_INPUT',
-  'UNKNOWN_TOOL',
-  'TOOL_BUDGET_EXCEEDED',
-  'HANDS_UNAVAILABLE',
-  'HANDS_AUTH',
-  'LLM_ERROR',
-  'LLM_LENGTH',
-  'RUN_TIMEOUT',
-  'RESTART_LIMIT',
-  'CONTEXT_CORRUPT',
-] as const;
-export type ErrorCode = (typeof ERROR_CODES)[number];
-export const ErrorCodeSchema = Type.Union(ERROR_CODES.map((c) => Type.Literal(c)));
-
 export const TEMPLATE_IDS = [
   'llm_unavailable',
   'run_timeout',
@@ -71,7 +30,7 @@ export const TEMPLATE_IDS = [
 export type TemplateId = (typeof TEMPLATE_IDS)[number];
 export const TemplateIdSchema = Type.Union(TEMPLATE_IDS.map((t) => Type.Literal(t)));
 
-// TODO(T01-REVIEW): A-02 §3.5 lists which endReason values exist: "stop" | "turn_limit" (run_completed, §2.1).
+// endReason values per A-02 §3.5 / §2.1: "stop" | "turn_limit".
 export const EndReason = Type.Union([Type.Literal('stop'), Type.Literal('turn_limit')]);
 
 /** A-02 §12.1: meta.ending lets crash recovery re-write the ending deterministically. */
@@ -111,30 +70,13 @@ export const UsageSummary = Type.Object(
 );
 export type UsageSummary = Static<typeof UsageSummary>;
 
-/** A-01 §4.5 TicketSummary: copied from the quote's display, no freshly computed numbers. */
-export const TicketSummary = Type.Object(
-  {
-    ticketNo: Str(),
-    from: Str(),
-    to: Str(),
-    legs: Type.Array(Type.Object({ from: Str(), to: Str() }, strict)),
-    transferCities: Type.Array(Str()),
-    display: Type.Object(
-      { legs: Type.Array(Type.String()), totalDistanceKm: Type.String(), priceUsd: Type.String() },
-      strict,
-    ),
-  },
-  strict,
-);
-export type TicketSummary = Static<typeof TicketSummary>;
-
 // ---------- durable event payloads ----------
 export const UserMessagePayload = Type.Object({ text: Type.String(), clientMessageId: Str() }, strict);
 
 export const QuoteOfferedPayload = Type.Object({ runId: RunId, quoteId: QuoteId, toolCallId: Str() }, strict); // no numbers
 
 export const BookingConfirmedPayload = Type.Object(
-  { quoteId: QuoteId, ticketId: TicketId, ticketNo: Str(), summary: TicketSummary },
+  { quoteId: QuoteId, ticketId: TicketId, ticketNo: Str(), summary: TicketSummarySchema },
   strict,
 );
 export const BookingFailedPayload = Type.Object({ quoteId: QuoteId, code: ErrorCodeSchema }, strict);
@@ -158,33 +100,65 @@ export const AgentRunStartedPayload = Type.Object(
 export const AgentRunResumedPayload = Type.Object({ runId: RunId, attempt: Type.Integer({ minimum: 2 }) }, strict);
 
 /**
- * A-02 §2.1/§2.3 + M-3 (`processText`, M-2: stored verbatim, NOT masked).
- * TODO(T01-REVIEW): the role-dependent rules ("assistant MUST carry hasToolCalls/viewText"; toolCallId/toolName/isError
- * only for toolResult; processText only for assistant with hasToolCalls:true and then viewText must be "") are not
- * expressible in one flat strict object without a per-role union; they are left to gateway's EVENT_INVALID checks.
- * Say if a role-discriminated union is wanted instead.
+ * agent.message (A-02 §2.1/§2.3, M-2/M-3, M-16): a union discriminated by role (+ hasToolCalls for assistant), so the
+ * schema itself enforces which fields each shape carries; no hand-written gateway check is needed.
+ *   - system
+ *   - assistant, hasToolCalls:true  -> viewText must be the literal "", processText required (M-2: raw text, may be "")
+ *   - assistant, hasToolCalls:false -> viewText required, processText forbidden; may carry meta (template messages)
+ *   - toolResult                    -> toolCallId, toolName, isError required; data/fill optional
  */
-export const AgentMessagePayload = Type.Object(
+const agentMessageBase = {
+  runId: RunId,
+  attempt: Type.Integer({ minimum: 1 }),
+  n: Type.Optional(Type.Integer({ minimum: 0 })),
+  messageKey: Str(),
+  messageJson: Type.String(), // opaque verbatim pi message; gateway never parses it
+  piVersion: Str(),
+};
+
+export const AgentSystemMessagePayload = Type.Object({ ...agentMessageBase, role: Type.Literal('system') }, strict);
+
+export const AgentAssistantToolCallsMessagePayload = Type.Object(
   {
-    runId: RunId,
-    attempt: Type.Integer({ minimum: 1 }),
-    n: Type.Optional(Type.Integer({ minimum: 0 })),
-    messageKey: Str(),
-    role: Type.Union([Type.Literal('system'), Type.Literal('assistant'), Type.Literal('toolResult')]),
-    messageJson: Type.String(), // opaque verbatim pi message; gateway never parses it
-    piVersion: Str(),
-    viewText: Type.Optional(Type.String()),
-    hasToolCalls: Type.Optional(Type.Boolean()),
-    toolCallId: Type.Optional(Str()),
-    toolName: Type.Optional(Str()),
-    isError: Type.Optional(Type.Boolean()),
-    data: Type.Optional(Type.Unknown()),
-    fill: Type.Optional(Type.Union([Type.Literal('replayed'), Type.Literal('interrupted')])),
-    meta: Type.Optional(Type.Object({ template: TemplateIdSchema, ending: Ending }, strict)),
-    processText: Type.Optional(Type.String()), // M-2/M-3
+    ...agentMessageBase,
+    role: Type.Literal('assistant'),
+    hasToolCalls: Type.Literal(true),
+    viewText: Type.Literal(''),
+    processText: Type.String(),
   },
   strict,
 );
+
+export const AgentAssistantFinalMessagePayload = Type.Object(
+  {
+    ...agentMessageBase,
+    role: Type.Literal('assistant'),
+    hasToolCalls: Type.Literal(false),
+    viewText: Type.String(),
+    meta: Type.Optional(Type.Object({ template: TemplateIdSchema, ending: Ending }, strict)),
+  },
+  strict,
+);
+
+export const AgentToolResultMessagePayload = Type.Object(
+  {
+    ...agentMessageBase,
+    role: Type.Literal('toolResult'),
+    toolCallId: Str(),
+    toolName: Str(),
+    isError: Type.Boolean(),
+    data: Type.Optional(Type.Unknown()),
+    fill: Type.Optional(Type.Union([Type.Literal('replayed'), Type.Literal('interrupted')])),
+  },
+  strict,
+);
+
+export const AgentMessagePayload = Type.Union([
+  AgentSystemMessagePayload,
+  AgentAssistantToolCallsMessagePayload,
+  AgentAssistantFinalMessagePayload,
+  AgentToolResultMessagePayload,
+]);
 
 export const AgentGuardViolationPayload = Type.Object(
   {
@@ -287,9 +261,7 @@ export const EVENT_ACTOR: Record<EventType, Actor> = {
   'agent.context_compacted': 'agent',
 };
 
-// TODO(T01-REVIEW): A-01 §6.1 says `id: string // uuid`, while A-01 §3.2 events.id is uuid. Pattern-checked (not
-// `format:'uuid'`) so validation does not depend on TypeBox's format registry.
-const UUID_PATTERN = '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$';
+// M-15: uuids are pattern-checked with the shared UUID_PATTERN from web.
 const IsoTs = Type.String({ minLength: 20, maxLength: 40, pattern: '^\\d{4}-\\d{2}-\\d{2}T' });
 
 const envelopeBase = {
@@ -333,8 +305,8 @@ export type EventEnvelopeOf<T extends EventType = EventType> = T extends EventTy
 export const EventEnvelope = Type.Union(EVENT_TYPES.map((t) => envelopeFor(t)));
 export type EventEnvelope = EventEnvelopeOf;
 
-// TODO(T01-REVIEW): A-02 §2.2 says every ephemeral envelope carries the current fence (gateway drops stale ones),
-// but A-01 §6.1's EphemeralEnvelope has no `fence` field. Added `fence` here (A-02 wins: it owns ephemeral events).
+// M-17: the INTERNAL ephemeral envelope carries `fence` (A-02 §2.2; gateway drops stale ones). The public view
+// (PublicEphemeral in @fb/contracts/web) is `{ type, payload }` without it.
 export const EphemeralEnvelope = Type.Union(
   EPHEMERAL_TYPES.map((t) =>
     Type.Object(

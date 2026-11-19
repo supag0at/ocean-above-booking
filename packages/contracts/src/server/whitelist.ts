@@ -14,12 +14,11 @@ export interface EventPolicy {
   readonly kind: 'durable' | 'ephemeral';
 }
 
-// TODO(T01-REVIEW): the task brief expects "only booking can write booking.confirmed", but the spec says the
-// *gateway* writes it as the system actor after calling booking (A-01 §5.2 step 3, §6.3; A-01 §3.3: only gateway
-// writes events; booking has no events grant). Following the spec: writer = 'gateway'. 'booking' and 'hands'
-// are valid Writer values that currently own no event types.
-// TODO(T01-REVIEW): ephemeral events are published by harness straight to Redis (A-02 §2.2, A-01 §7.1/§7.2) with a
-// fence in the envelope; modelled as writer 'harness', fence true.
+// M-21 (parent ruling, kept as-is): not covered by M-1..M-20. Earlier briefs expected "only booking can write booking.confirmed", but
+// the spec says the *gateway* writes it as the system actor after calling booking (A-01 §5.2 step 3, §6.3; A-01 §3.3:
+// only gateway writes events; booking has no events grant). Kept per spec: writer = 'gateway'. 'booking' and 'hands'
+// are valid Writer values that currently own no event types. Confirm.
+// M-17: ephemeral events go from harness straight to Redis with a fence in the internal envelope: writer 'harness', fence true.
 export const EVENT_WRITE_POLICY = {
   'user.message': { writer: 'gateway', fence: false, kind: 'durable' },
   'quote.offered': { writer: 'harness', fence: true, kind: 'durable' },

@@ -2,6 +2,7 @@
 // Request schemas never contain userId (H-04). Query params are strings (pattern-checked and
 // converted explicitly by the handler, A-01 §4.1: coerceTypes is off).
 import { Type, type Static } from 'typebox';
+import { UUID_PATTERN } from './constants.ts';
 import { PublicEventSchema } from './events.ts';
 import {
   LocaleSchema,
@@ -35,8 +36,8 @@ export const PageQuerySchema = Type.Object(
 export type PageQuery = Static<typeof PageQuerySchema>;
 
 // ---- auth / me ----
-// TODO(T01-REVIEW): A-01 §4.3 says the body is `username: string(1..64)` but the server then
-// normalizes (NFKC + trim + lower) and requires 1..32 after normalization. Schema uses the 1..64 from the table.
+// M-19: two-step username check. Step 1 (this schema): raw length 1..64. Step 2 is the SERVER's job, not
+// expressible here: normalize (NFKC + trim + lower), then require 1..32 on the normalized value.
 export const LoginBodySchema = Type.Object({ username: Type.String({ minLength: 1, maxLength: 64 }) }, strict);
 export type LoginBody = Static<typeof LoginBodySchema>;
 export const UserResponseSchema = Type.Object({ user: UserViewSchema }, strict);
@@ -70,12 +71,11 @@ export type EventsResponse = Static<typeof EventsResponseSchema>;
 export const StreamQuerySchema = Type.Object({ afterSeq: Type.Optional(Type.String(digits)) }, strict);
 export type StreamQuery = Static<typeof StreamQuerySchema>;
 
-// TODO(T01-REVIEW): `format: 'uuid'` needs ajv-formats (or an equivalent format registration) in the
-// Fastify ajv config of @fb/platform/fastify; plain ajv rejects unknown formats at compile time.
+// M-15: uuid is a `pattern` (UUID_PATTERN), never `format`, so no ajv-formats is needed.
 export const PostMessageBodySchema = Type.Object(
   {
     text: Type.String({ minLength: 1, maxLength: 2000 }),
-    clientMessageId: Type.String({ format: 'uuid' }),
+    clientMessageId: Type.String({ pattern: UUID_PATTERN }),
   },
   strict,
 );

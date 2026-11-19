@@ -12,7 +12,7 @@ const quote = {
   totalDistanceKm: 5800.123,
   priceCents: 75402,
   display: { legs: ['5800.12'], totalDistanceKm: '5800.12', priceUsd: '754.02' },
-  dataSha256: 'fc41',
+  dataSha256: 'f'.repeat(64),
   createdAt: '2026-11-19T00:00:00Z',
 };
 const user = { id: 'u1', username: 'bob', locale: 'zh' };
@@ -293,11 +293,24 @@ describe('PublicEvent', () => {
 
 describe('constants and error codes', () => {
   it('constants', () => {
-    expect(web.PRICE_PER_KM_USD).toBe(0.13);
+    expect('PRICE_PER_KM_USD' in web).toBe(false); // M-13: the browser holds no price rate
     expect(web.DISPLAY_ROUNDING).toEqual({ distanceKmDecimals: 2, priceUsdDecimals: 2 });
   });
-  it('every ErrorCode has an HTTP status', () => {
-    for (const code of Object.values(web.ErrorCode)) expect(web.ERROR_HTTP_STATUS[code]).toBeGreaterThanOrEqual(400);
+  it('ErrorCode is the merged enum: 19 codes of A-01 §4.6 + 16 agent-side codes (M-12)', () => {
+    expect(Object.values(web.ErrorCode)).toHaveLength(35);
+    for (const [k, v] of Object.entries(web.ErrorCode)) expect(k).toBe(v);
+    for (const c of ['RUN_TIMEOUT', 'LLM_ERROR', 'CITY_NOT_FOUND', 'QUOTE_ALREADY_BOOKED', 'CONTEXT_CORRUPT']) {
+      expect(Value.Check(web.ErrorCodeSchema, c)).toBe(true);
+    }
+    expect(Value.Check(web.ErrorCodeSchema, 'NOPE')).toBe(false);
+  });
+  it('every A-01 §4.6 code has an HTTP status', () => {
+    const entries = Object.entries(web.ERROR_HTTP_STATUS);
+    expect(entries).toHaveLength(19);
+    for (const [code, status] of entries) {
+      expect(code in web.ErrorCode).toBe(true);
+      expect(status).toBeGreaterThanOrEqual(400);
+    }
     expect(web.ErrorCode.QUOTE_NOT_OFFERED).toBe('QUOTE_NOT_OFFERED');
   });
   it('no MASK_TOKEN (M-2)', () => {
@@ -326,4 +339,55 @@ describe('web entry isolation', () => {
       }
     });
   }
+});
+
+describe('M-12 / M-15 public schemas', () => {
+  const evBase = { seq: 1, actor: 'agent', ts: '2026-11-19T00:00:00Z' };
+  const e = (type: string, payload: unknown) => ({ ...evBase, type, payload });
+  it('run_failed.code and booking.failed.code are ErrorCodes', () => {
+    expect(Value.Check(web.PublicEventSchema, e('agent.run_failed', { runId: 'r', code: 'RUN_TIMEOUT' }))).toBe(true);
+    expect(Value.Check(web.PublicEventSchema, e('agent.run_failed', { runId: 'r', code: 'NOPE' }))).toBe(false);
+    expect(Value.Check(web.PublicEventSchema, e('booking.failed', { quoteId: 'q', code: 'BOOKING_UNAVAILABLE' }))).toBe(
+      true,
+    );
+    expect(Value.Check(web.PublicEventSchema, e('booking.failed', { quoteId: 'q', code: 'free text' }))).toBe(false);
+  });
+  it('TicketSummary / QuoteLeg / QuoteDisplay are defined in web', () => {
+    const ok = {
+      ticketNo: 'OA-JKMNPQRS',
+      from: 'A',
+      to: 'C',
+      legs: [{ from: 'A', to: 'B' }],
+      transferCities: ['B'],
+      display: { legs: ['1.00'], totalDistanceKm: '1.00', priceUsd: '0.13' },
+    };
+    expect(Value.Check(web.TicketSummarySchema, ok)).toBe(true);
+    expect(Value.Check(web.TicketSummarySchema, { ...ok, priceCents: 13 })).toBe(false);
+    expect(Value.Check(web.TicketSummarySchema, { ...ok, legs: [{ from: 'A', to: 'B', distanceKm: 1 }] })).toBe(false);
+    expect(Value.Check(web.QuoteLegSchema, { from: 'A', to: 'B', distanceKm: 1.5 })).toBe(true);
+    expect(Value.Check(web.QuoteDisplaySchema, { legs: [], totalDistanceKm: '1.00', priceUsd: '0.13' })).toBe(true);
+  });
+  it('M-15: clientMessageId is checked by the uuid pattern, not a format', () => {
+    const body = (id: string) => ({ text: 'hi', clientMessageId: id });
+    expect(Value.Check(web.PostMessageBodySchema, body('123e4567-e89b-12d3-a456-426614174000'))).toBe(true);
+    expect(Value.Check(web.PostMessageBodySchema, body('123E4567-E89B-12D3-A456-426614174000'))).toBe(true);
+    expect(Value.Check(web.PostMessageBodySchema, body('not-a-uuid'))).toBe(false);
+    expect(Value.Check(web.PostMessageBodySchema, body('123e4567-e89b-12d3-a456-42661417400'))).toBe(false);
+    expect(new RegExp(web.UUID_PATTERN).test('123e4567-e89b-12d3-a456-426614174000')).toBe(true);
+  });
+  it('M-19 step 1: login username is 1..64 raw (the 1..32 normalized check is the server job)', () => {
+    expect(Value.Check(web.LoginBodySchema, { username: 'a'.repeat(64) })).toBe(true);
+    expect(Value.Check(web.LoginBodySchema, { username: 'a'.repeat(65) })).toBe(false);
+    expect(Value.Check(web.LoginBodySchema, { username: '' })).toBe(false);
+  });
+});
+
+describe('M-17 public ephemeral view', () => {
+  it('is { type, payload } and rejects a fence', () => {
+    const ok = { type: 'agent.reasoning_delta', payload: { runId: 'r', messageKey: 'k', textDelta: 'x' } };
+    expect(Value.Check(web.PublicEphemeralSchema, ok)).toBe(true);
+    expect(Value.Check(web.PublicEphemeralSchema, { ...ok, fence: 3 })).toBe(false);
+    expect(Value.Check(web.PublicEphemeralSchema, { ...ok, seq: 3 })).toBe(false);
+    expect(Value.Check(web.PublicEphemeralSchema, { ...ok, sessionId: 's' })).toBe(false);
+  });
 });

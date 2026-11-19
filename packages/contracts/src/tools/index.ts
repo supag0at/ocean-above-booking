@@ -1,14 +1,16 @@
 // @fb/contracts/tools: LLM tool definitions, the hands `execute` envelope and agent-side error codes.
 // Sources: A-02 §5.1-§5.3, §7.0-§7.5; CONTRACT-v1 §1.2, §2 (M-6), §3, §4 (CT-01, CT-02, CT-08).
-// Only dependency: typebox. No IO, no imports from other contract entries.
+// Dependencies: typebox, and the web and flight entries (M-11 layering: web <- flight <- tools <- server).
+// The single ErrorCode enum, Quote and TicketView come from web (M-12). No IO.
 //
 // Schema rules: every object has `additionalProperties:false` (D-24); no `Type.Never` (DeepSeek
 // compatibility); no identity fields anywhere (H-04: identity comes from the hands token).
 import { Type } from 'typebox';
 import type { Static, TSchema } from 'typebox';
+import { QuoteSchema, TicketViewSchema, type ErrorCode } from '../web/index.ts';
 
 // ---------------------------------------------------------------------------------------------
-// Agent-side error codes (A-02 §5.3)
+// Agent-side error codes (A-02 §5.3). Subset list only: the enum itself is web's ErrorCode (M-12).
 // ---------------------------------------------------------------------------------------------
 
 export const AGENT_ERROR_CODES = [
@@ -34,7 +36,7 @@ export const AGENT_ERROR_CODES = [
   'RESTART_LIMIT',
   'CONTEXT_CORRUPT',
   'FENCE_STALE',
-] as const;
+] as const satisfies readonly ErrorCode[];
 export type AgentErrorCode = (typeof AGENT_ERROR_CODES)[number];
 
 /** Codes hands may return inside `{ ok:false, error }` (everything else is raised by the harness). */
@@ -69,19 +71,8 @@ export const LLM_TEXT_HANDS_UNAVAILABLE =
 export const SYS_CALL_PREFIX = 'sys.';
 export const SYS_PROFILE_SNAPSHOT = 'sys.profile_snapshot';
 
-// ---------------------------------------------------------------------------------------------
-// Idempotency keys (CONTRACT-v1 §2 M-6). Pure string builders, no IO.
-// ---------------------------------------------------------------------------------------------
-
-/** `quote.offered` idempotencyKey */
-export function quoteOfferedIdempotencyKey(runId: string, toolCallId: string): string {
-  return `offer:${runId}:${toolCallId}`;
-}
-/** toolResult messageKey */
-export function toolResultMessageKey(runId: string, toolCallId: string): string {
-  return `msg:tr:${runId}:${toolCallId}`;
-}
-// hands-side key is the tuple (session_id, run_id, tool_call_id); see ExecuteRequest.
+// Idempotency keys and messageKeys are built ONLY in @fb/contracts/server (M-12, M-14). The hands-side key is
+// the tuple (session_id, run_id, tool_call_id); see ExecuteRequest.
 
 // ---------------------------------------------------------------------------------------------
 // execute envelope (A-02 §5.1)
@@ -104,6 +95,7 @@ export const ExecuteRequestSchema = Type.Object(
 );
 export type ExecuteRequest = Static<typeof ExecuteRequestSchema>;
 
+/** Codes allowed inside an execute error: the AGENT_ERROR_CODES subset of web's ErrorCode. */
 const ErrorCodeSchema = Type.Union(AGENT_ERROR_CODES.map((c) => Type.Literal(c)));
 
 export const ExecuteOkResponseSchema = Type.Object(
@@ -144,20 +136,6 @@ export const EXECUTE_RETRY_DELAYS_MS = [200, 800] as const;
 
 const NearestServedSchema = Type.Object(
   { city: Type.String(), distanceKm: Type.String() },
-  { additionalProperties: false },
-);
-
-const LegSchema = Type.Object(
-  { from: Type.String(), to: Type.String(), distanceKm: Type.Number() },
-  { additionalProperties: false },
-);
-
-const RouteDisplaySchema = Type.Object(
-  {
-    legs: Type.Array(Type.String()),
-    totalDistanceKm: Type.String(),
-    priceUsd: Type.String(),
-  },
   { additionalProperties: false },
 );
 
@@ -215,8 +193,7 @@ export const ResolveCityData = Type.Object(
       Type.Literal('not_found'),
     ]),
     matches: Type.Array(CityMatchSchema, { maxItems: 5 }),
-    // TODO(T01-REVIEW): A-02 §7.1 shows matchedBy unconditionally, but for not_found there is nothing
-    // to point at; made optional here.
+    // M-19: matchedBy is optional (nothing to point at for not_found).
     matchedBy: Type.Optional(
       Type.Object(
         {
@@ -252,21 +229,8 @@ export const QuoteRouteParams = Type.Object(
 );
 export type QuoteRouteParamsT = Static<typeof QuoteRouteParams>;
 
-export const QuoteRouteData = Type.Object(
-  {
-    quoteId: Type.String(),
-    from: Type.String(),
-    to: Type.String(),
-    legs: Type.Array(LegSchema),
-    transferCities: Type.Array(Type.String()),
-    totalDistanceKm: Type.Number(),
-    priceCents: Type.Integer({ minimum: 0 }),
-    display: RouteDisplaySchema,
-    dataSha256: Type.String(),
-    createdAt: Type.String(),
-  },
-  { additionalProperties: false },
-);
+/** `data` of quote_route = Quote (A-02 §7.2), defined once in web (M-12). */
+export const QuoteRouteData = QuoteSchema;
 export type QuoteRouteDataT = Static<typeof QuoteRouteData>;
 
 export const quoteRouteTool = {
@@ -323,25 +287,10 @@ export const ListMyTicketsParams = Type.Object(
 );
 export type ListMyTicketsParamsT = Static<typeof ListMyTicketsParams>;
 
-// TODO(T01-REVIEW): A-02 §7.4 only lists the ticket field names, not their types or whether
-// transferCities is included. Types below mirror Quote (§7.2); confirm.
-const TicketSchema = Type.Object(
-  {
-    ticketId: Type.String(),
-    ticketNo: Type.String(),
-    bookedAt: Type.String(),
-    from: Type.String(),
-    to: Type.String(),
-    legs: Type.Array(LegSchema),
-    totalDistanceKm: Type.Number(),
-    priceCents: Type.Integer({ minimum: 0 }),
-    display: RouteDisplaySchema,
-  },
-  { additionalProperties: false },
-);
+// M-19: list_my_tickets returns TicketView[] (web, M-12); numbers in llmText equal itinerary.display.
 
 export const ListMyTicketsData = Type.Object(
-  { tickets: Type.Array(TicketSchema), total: Type.Integer({ minimum: 0 }) },
+  { tickets: Type.Array(TicketViewSchema), total: Type.Integer({ minimum: 0 }) },
   { additionalProperties: false },
 );
 export type ListMyTicketsDataT = Static<typeof ListMyTicketsData>;
@@ -388,8 +337,7 @@ export const ForgetPreferenceParams = Type.Object(
 );
 export type ForgetPreferenceParamsT = Static<typeof ForgetPreferenceParams>;
 
-// TODO(T01-REVIEW): A-02 §7.5 defines only llmText for these two tools, not `data`. Proposal: echo
-// the stored key/value (value is the canonical city_name for home_city).
+// M-19: save/forget return an echo of the stored key/value (canonical city_name for home_city).
 export const SavePreferenceData = Type.Object(
   { key: Type.Union([Type.Literal('home_city'), Type.Literal('preferred_language')]), value: Type.String() },
   { additionalProperties: false },
@@ -415,7 +363,7 @@ export const forgetPreferenceTool = {
   description: 'Forget a previously saved user preference (home_city or preferred_language).',
   parameters: ForgetPreferenceParams,
   data: ForgetPreferenceData,
-  // TODO(T01-REVIEW): no llmText example for forget_preference in A-02 §7.5; this one is invented.
+  // M-19 (echo): A-02 §7.5 has no llmText example for forget_preference; this one mirrors save_preference.
   llmText: '"Forgot: home_city."',
   executionMode: 'sequential',
 } as const satisfies ToolDefinition;

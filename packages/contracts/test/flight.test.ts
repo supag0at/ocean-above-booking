@@ -11,7 +11,10 @@ import {
   RUN_LIMITS,
   TIE_BREAK_ORDER,
   TRANSLITERATION_TABLE,
+  type Route,
 } from '../src/flight/index.ts';
+import * as flightModule from '../src/flight/index.ts';
+import type { Quote } from '../src/web/index.ts';
 
 describe('flight constants (CONTRACT-v1 §3)', () => {
   it('match the contract values', () => {
@@ -52,5 +55,39 @@ describe('flight constants (CONTRACT-v1 §3)', () => {
     for (const k of Object.keys(TRANSLITERATION_TABLE)) {
       expect(k.normalize('NFKD').replace(/\p{M}/gu, '')).toBe(k);
     }
+  });
+});
+
+describe('M-19 transliteration additions', () => {
+  it('has the A-02 extras and the capitals Ð, Ħ, Þ', () => {
+    const extra: Record<string, string> = { Œ: 'OE', ð: 'd', ı: 'i', ħ: 'h', Ð: 'D', Ħ: 'H', Þ: 'TH' };
+    for (const [k, v] of Object.entries(extra)) expect(TRANSLITERATION_TABLE[k]).toBe(v);
+  });
+  it('capital and small forms agree after lowercasing', () => {
+    for (const [cap, small] of [
+      ['Ð', 'ð'],
+      ['Ħ', 'ħ'],
+      ['Þ', 'þ'],
+      ['Œ', 'œ'],
+    ] as const) {
+      expect(TRANSLITERATION_TABLE[cap]?.toLowerCase()).toBe(TRANSLITERATION_TABLE[small]);
+    }
+  });
+});
+
+describe('M-12 Route is derived from the web Quote', () => {
+  it('a Route plus quoteId/dataSha256/createdAt is a web Quote (type-level check)', () => {
+    const route: Route = {
+      from: 'A',
+      to: 'B',
+      legs: [{ from: 'A', to: 'B', distanceKm: 1 }],
+      transferCities: [],
+      totalDistanceKm: 1,
+      priceCents: 13,
+      display: { legs: ['1.00'], totalDistanceKm: '1.00', priceUsd: '0.13' },
+    };
+    const quote: Quote = { ...route, quoteId: 'q_x', dataSha256: LOCATIONS_DB_SHA256, createdAt: 't' };
+    expect(quote.priceCents).toBe(route.priceCents);
+    expect('Quote' in flightModule).toBe(false);
   });
 });

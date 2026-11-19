@@ -7,8 +7,7 @@ set -euo pipefail
 
 SECRETS_DIR="${SECRETS_DIR:-/run/secrets}"
 # Directory holding migrations/ and grants.sql. Default: the parent of this script's directory (infra/db).
-# TODO(T01-REVIEW): compose.yml mounts only init/ into /docker-entrypoint-initdb.d; migrations/ and grants.sql must be mounted
-# too (e.g. infra/db at /infra-db, read-only) and INFRA_DB_DIR=/infra-db set (non-secret). compose.yml was not changed (T14).
+# M-20: compose mounts infra/db read-only at /infra-db and sets INFRA_DB_DIR=/infra-db.
 DB_DIR="${INFRA_DB_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 DB_NAME="${POSTGRES_DB:-app}"
 SUPER="${POSTGRES_USER:-postgres}"

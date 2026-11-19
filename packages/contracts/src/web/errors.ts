@@ -1,6 +1,5 @@
-// Error codes (A-01 §4.6). Rule "same name, same meaning" (S-8).
-// Source of truth: A-01 §4.6 table. HTTP statuses are exported alongside so that
-// the gateway and the frontend mock share one mapping.
+// Error codes: the single definition (M-12). A-01 §4.6 (19 codes, with HTTP statuses) plus the agent-side
+// codes of A-02 §5.3. Rule "same name, same meaning" (S-8). tools and server import this enum.
 import { Type, type Static } from 'typebox';
 
 export const ErrorCode = {
@@ -24,18 +23,58 @@ export const ErrorCode = {
   SERVICE_AUTH_INVALID: 'SERVICE_AUTH_INVALID',
   SESSION_INACTIVE: 'SESSION_INACTIVE',
   INTERNAL: 'INTERNAL',
-  // TODO(T01-REVIEW): A-02 §5.3 agent-side codes (CITY_NOT_FOUND, LLM_ERROR, RUN_TIMEOUT, ...) must
-  // also be merged into "the same ErrorCode enum" (A-01 §4.6) because agent.run_failed.code is an
-  // ErrorCode, but CONTRACT §1.1 puts agent-side codes in @fb/contracts/tools. Not included here;
-  // see RunFailedPayloadSchema.code (plain string) in events.ts.
+  // M-12: agent-side codes (A-02 §5.3) live in the same enum, because agent.run_failed.code and
+  // booking.failed.code are ErrorCodes in the public view. They have no HTTP status (see HttpErrorCode).
+  CITY_NOT_FOUND: 'CITY_NOT_FOUND',
+  CITY_AMBIGUOUS: 'CITY_AMBIGUOUS',
+  CITY_NOT_SERVED: 'CITY_NOT_SERVED',
+  SAME_CITY: 'SAME_CITY',
+  NO_ROUTE: 'NO_ROUTE',
+  QUOTE_ALREADY_BOOKED: 'QUOTE_ALREADY_BOOKED',
+  INVALID_INPUT: 'INVALID_INPUT',
+  UNKNOWN_TOOL: 'UNKNOWN_TOOL',
+  TOOL_BUDGET_EXCEEDED: 'TOOL_BUDGET_EXCEEDED',
+  HANDS_UNAVAILABLE: 'HANDS_UNAVAILABLE',
+  HANDS_AUTH: 'HANDS_AUTH',
+  LLM_ERROR: 'LLM_ERROR',
+  LLM_LENGTH: 'LLM_LENGTH',
+  RUN_TIMEOUT: 'RUN_TIMEOUT',
+  RESTART_LIMIT: 'RESTART_LIMIT',
+  CONTEXT_CORRUPT: 'CONTEXT_CORRUPT',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
 export const ErrorCodeSchema = Type.Union(Object.values(ErrorCode).map((c) => Type.Literal(c)));
 
-/** HTTP status per code (A-01 §4.6). */
-export const ERROR_HTTP_STATUS: Readonly<Record<ErrorCode, number>> = {
+/** Agent-side codes (A-02 §5.3) that A-01 §4.6 does not list: they never appear as an HTTP status. */
+export type AgentOnlyErrorCode = Exclude<
+  ErrorCode,
+  | 'AUTH_REQUIRED'
+  | 'CSRF_INVALID'
+  | 'FORBIDDEN_PEER'
+  | 'VALIDATION_FAILED'
+  | 'PAYLOAD_TOO_LARGE'
+  | 'SESSION_NOT_FOUND'
+  | 'QUOTE_NOT_FOUND'
+  | 'TICKET_NOT_FOUND'
+  | 'MEMORY_NOT_FOUND'
+  | 'IDEMPOTENCY_CONFLICT'
+  | 'QUOTE_NOT_OFFERED'
+  | 'BOOKING_UNAVAILABLE'
+  | 'SERVICE_UNAVAILABLE'
+  | 'FENCE_STALE'
+  | 'EVENT_TYPE_FORBIDDEN'
+  | 'EVENT_INVALID'
+  | 'SERVICE_AUTH_INVALID'
+  | 'SESSION_INACTIVE'
+  | 'INTERNAL'
+>;
+/** The 19 codes of A-01 §4.6, i.e. the ones that have an HTTP status. */
+export type HttpErrorCode = Exclude<ErrorCode, AgentOnlyErrorCode>;
+
+/** HTTP status per A-01 §4.6 code. */
+export const ERROR_HTTP_STATUS: Readonly<Record<HttpErrorCode, number>> = {
   AUTH_REQUIRED: 401,
   CSRF_INVALID: 403,
   FORBIDDEN_PEER: 403,

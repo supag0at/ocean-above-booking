@@ -32,17 +32,18 @@ export const SessionViewSchema = Type.Object(
 );
 export type SessionView = Static<typeof SessionViewSchema>;
 
-// TODO(T01-REVIEW): `Quote` is owned by flight-core (A-02 §7.2, @fb/contracts/flight) but web may not
-// import other entries, so its shape is duplicated here from the A-02 §7.2 example. Field types
-// (distanceKm: number, priceCents: integer, createdAt: string) are inferred from the example only.
+// M-12: Quote / QuoteLeg / QuoteDisplay / TicketView / TicketSummary are defined ONLY here; flight and server
+// import them. Shape per A-02 §7.2. Numbers are API-computed values; the browser never derives them (M-13).
 export const QuoteLegSchema = Type.Object(
   { from: Type.String(), to: Type.String(), distanceKm: Type.Number() },
   strict,
 );
+export type QuoteLeg = Static<typeof QuoteLegSchema>;
 export const QuoteDisplaySchema = Type.Object(
   { legs: Type.Array(Type.String()), totalDistanceKm: Type.String(), priceUsd: Type.String() },
   strict,
 );
+export type QuoteDisplay = Static<typeof QuoteDisplaySchema>;
 export const QuoteSchema = Type.Object(
   {
     quoteId: Type.String(),
@@ -51,9 +52,9 @@ export const QuoteSchema = Type.Object(
     legs: Type.Array(QuoteLegSchema),
     transferCities: Type.Array(Type.String()),
     totalDistanceKm: Type.Number(),
-    priceCents: Type.Integer(),
+    priceCents: Type.Integer({ minimum: 0 }),
     display: QuoteDisplaySchema,
-    dataSha256: Type.String(),
+    dataSha256: Type.String({ pattern: '^[0-9a-f]{64}$' }),
     createdAt: Type.String(),
   },
   strict,
@@ -80,12 +81,26 @@ export const TicketViewSchema = Type.Object(
     from: Type.String(),
     to: Type.String(),
     itinerary: QuoteSchema,
-    priceCents: Type.Integer(),
+    priceCents: Type.Integer({ minimum: 0 }),
     bookedAt: Type.String(),
   },
   strict,
 );
 export type TicketView = Static<typeof TicketViewSchema>;
+
+/** A-01 §4.5 TicketSummary (booking.confirmed payload): copied from the quote's display, no freshly computed numbers. */
+export const TicketSummarySchema = Type.Object(
+  {
+    ticketNo: Type.String({ minLength: 1 }),
+    from: Type.String({ minLength: 1 }),
+    to: Type.String({ minLength: 1 }),
+    legs: Type.Array(Type.Object({ from: Type.String({ minLength: 1 }), to: Type.String({ minLength: 1 }) }, strict)),
+    transferCities: Type.Array(Type.String({ minLength: 1 })),
+    display: QuoteDisplaySchema,
+  },
+  strict,
+);
+export type TicketSummary = Static<typeof TicketSummarySchema>;
 
 export const MemoryViewSchema = Type.Object(
   {

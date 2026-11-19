@@ -6,13 +6,12 @@ import { randomBytes } from 'node:crypto';
 export const CROCKFORD_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 export const ID_BODY_LENGTH = 26;
 
-// TODO(T01-REVIEW): A-01 §3.2 only fixes the `q_` and `t_` prefixes (SQL CHECKs). `run_` comes from
-// A-02 §3.4 ("run_" + ULID; A-02 §16 table row 2) - here it is the same 26-char random body, not a ULID.
-// No prefix is specified for memoryId (MemoryView); compactionId (`cmp_` + boundaryRunId) is derived, not random.
+// M-19: `run_` is a random 26-char body (not a ULID); memory ids use `m_`. compactionId (`cmp_` + boundaryRunId) is derived.
 export const ID_PREFIX = {
   quote: 'q_',
   ticket: 't_',
   run: 'run_',
+  memory: 'm_',
 } as const;
 export type IdPrefix = (typeof ID_PREFIX)[keyof typeof ID_PREFIX];
 
@@ -28,6 +27,7 @@ export function newId(prefix: string): string {
 export const newQuoteId = (): string => newId(ID_PREFIX.quote);
 export const newTicketId = (): string => newId(ID_PREFIX.ticket);
 export const newRunId = (): string => newId(ID_PREFIX.run);
+export const newMemoryId = (): string => newId(ID_PREFIX.memory);
 
 /** Regex source (anchored) for a prefixed id; shared by schemas and tests. */
 export const idPattern = (prefix: string): string => `^${prefix}[0-9A-HJKMNP-TV-Z]{${ID_BODY_LENGTH}}$`;

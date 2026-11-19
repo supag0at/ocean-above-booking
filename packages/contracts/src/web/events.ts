@@ -3,6 +3,7 @@
 // no profile / offending / guard / usage / fence / compaction summary.
 // This entry deliberately does not export the internal EventEnvelope (I-4).
 import { Type, type Static, type TSchema } from 'typebox';
+import { ErrorCodeSchema } from './errors.ts';
 
 const strict = { additionalProperties: false } as const;
 
@@ -52,9 +53,9 @@ export const AgentProcessPayloadSchema = Type.Object(
   strict,
 );
 
-// TODO(T01-REVIEW): the toolResult variant has no `kind` in A-01 §4.5 / §9.4 (renderers tell it
+// M-21 (parent ruling, kept as-is): the toolResult variant has no `kind` in A-01 §4.5 / §9.4 (renderers tell it
 // apart by the presence of `toolCallId`), so the agent.message union is discriminated by `kind`
-// only for reply/process. Consider adding kind:'tool_result' if a uniform discriminator is wanted.
+// only for reply/process. Not covered by M-1..M-20: add kind:'tool_result' if a uniform discriminator is wanted.
 // A-02 §2.1 has `isError?` optional; A-01 §4.5 lists it as always present (gateway defaults false).
 export const AgentToolResultPayloadSchema = Type.Object(
   {
@@ -76,9 +77,8 @@ export const AgentMessagePayloadSchema = Type.Union([
 export const RunStartedPayloadSchema = Type.Object({ runId: Type.String() }, strict);
 export const RunResumedPayloadSchema = Type.Object({ runId: Type.String(), attempt: Type.Integer() }, strict);
 export const RunCompletedPayloadSchema = Type.Object({ runId: Type.String() }, strict);
-// TODO(T01-REVIEW): A-01 §4.5 says `code` is an ErrorCode, but the codes used by agent.run_failed
-// (A-02 §5.3: LLM_ERROR, RUN_TIMEOUT, ...) are not in the A-01 §4.6 enum. Kept as a plain string.
-export const RunFailedPayloadSchema = Type.Object({ runId: Type.String(), code: Type.String() }, strict);
+// M-12: `code` is the single ErrorCode (A-01 §4.6 + agent-side codes).
+export const RunFailedPayloadSchema = Type.Object({ runId: Type.String(), code: ErrorCodeSchema }, strict);
 export const GuardViolationPayloadSchema = Type.Object(
   {
     runId: Type.String(),
@@ -92,9 +92,8 @@ export const BookingConfirmedPayloadSchema = Type.Object(
   { quoteId: Type.String(), ticketId: Type.String(), ticketNo: Type.String() },
   strict,
 );
-// TODO(T01-REVIEW): booking.failed `code` has no stated type in A-01 §4.5; kept as a plain string
-// (same reason as run_failed) rather than guessing the ErrorCode subset.
-export const BookingFailedPayloadSchema = Type.Object({ quoteId: Type.String(), code: Type.String() }, strict);
+// M-12: `code` is the single ErrorCode.
+export const BookingFailedPayloadSchema = Type.Object({ quoteId: Type.String(), code: ErrorCodeSchema }, strict);
 /** `hidden`: system messages, compaction events and any unregistered type; only the seq survives. */
 export const HiddenPayloadSchema = Type.Object({}, strict);
 
@@ -121,10 +120,8 @@ const delta = Type.Union([
   Type.Object({ runId: Type.String(), messageKey: Type.String(), reset: Type.Literal(true) }, strict),
 ]);
 
-// TODO(T01-REVIEW): A-01 §4.5 gives only the PUBLIC PAYLOADS of ephemeral events and the SSE frame
-// is `event: eph` / `data: PublicEphemeral`, but the data shape is not spelled out. Assumed
-// `{ type, payload }` (no seq, no sessionId, no fence). The 4 KB size cap (M-4) is enforced by the
-// gateway on the internal event and is not expressed in this schema.
+// M-17: the public ephemeral view is `{ type, payload }` only (no seq, sessionId, traceId or fence; the fence
+// lives on the internal envelope in @fb/contracts/server). The 4 KB cap (M-4) is enforced on the internal event.
 export const PublicEphemeralSchema = Type.Union([
   Type.Object({ type: Type.Literal('agent.delta'), payload: delta }, strict),
   Type.Object(

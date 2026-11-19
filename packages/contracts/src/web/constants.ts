@@ -1,16 +1,12 @@
 // Global constants that belong to the web entry (CONTRACT-v1 §3).
-// TODO(T01-REVIEW): CONTRACT §3 does not say which entry owns PRICE_PER_KM_USD, and A-01 §1.3 does
-// not list it as a web item (the formatting function lives in @fb/contracts/server). It is placed
-// here on the parent's instruction; confirm it should not live in @fb/contracts/flight instead.
-
-/** USD per km (the take-home spec). */
-export const PRICE_PER_KM_USD = 0.13;
+// M-13: PRICE_PER_KM_USD is NOT here. The browser must not hold anything that can compute a price
+// (H-01); the per-km rate lives only in @fb/contracts/flight.
 
 /**
  * Display rounding (CONTRACT §3, D-09). Internally everything is unrounded float64; only the
  * display strings are rounded: distance to 2 decimals, price rounded to 0.01 USD.
- * The frontend NEVER rounds by itself: it shows `Quote.display` as given (A-01 §4.5).
- * The one real formatting function lives in @fb/contracts/server, not here.
+ * The frontend NEVER computes prices: it shows `Quote.display` as given (A-01 §4.5) and may only
+ * format values the API already computed with `formatKm` / `formatUsdCents` (format.ts, M-13).
  */
 export const DISPLAY_ROUNDING = {
   distanceKmDecimals: 2,
@@ -18,3 +14,9 @@ export const DISPLAY_ROUNDING = {
 } as const;
 
 export type DisplayRounding = typeof DISPLAY_ROUNDING;
+
+/**
+ * Shared uuid `pattern` (M-15): contracts never use the JSON-Schema format keyword, so no ajv-formats dependency.
+ * Anchored, case-insensitive hex. Reused by web and server schemas.
+ */
+export const UUID_PATTERN = '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$';

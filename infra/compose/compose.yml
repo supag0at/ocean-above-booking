@@ -160,13 +160,23 @@ services:
     environment:
       POSTGRES_DB: app
       POSTGRES_PASSWORD_FILE: /run/secrets/pg_superuser_password # a path, not a secret
+      INFRA_DB_DIR: /infra-db # non-secret: where 00-roles.sh finds migrations/ and grants.sql (M-20)
     secrets:
       - pg_superuser_password
       - pg_owner_password # init only (00-roles.sh)
       - pg_gateway_password # init only
       - pg_hands_password # init only
       - pg_booking_password # init only
-    # TODO(T01/T14): volumes for data, infra/db/init/ mounted at /docker-entrypoint-initdb.d, pg_hba from A-01 §2.2
+    volumes:
+      - type: bind
+        source: ../db
+        target: /infra-db
+        read_only: true
+      - type: bind
+        source: ../db/init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+    # TODO(T01/T14): volumes for data, pg_hba from A-01 §2.2
 
   redis:
     image: redis:7

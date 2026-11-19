@@ -3,7 +3,7 @@
 -- fb_owner is only used by migrate / 00-roles.sh; no runtime service uses it (H-05, I-14).
 REVOKE ALL ON ALL TABLES IN SCHEMA app FROM PUBLIC;
 REVOKE ALL ON SCHEMA app FROM PUBLIC;
--- TODO(T01-REVIEW): A-01 3.3 REVOKEs only tables from PUBLIC. Also revoking schema privileges from PUBLIC and revoking
+-- M-20 (kept): A-01 3.3 REVOKEs only tables from PUBLIC. Also revoking schema privileges from PUBLIC and revoking
 -- previous grants from the three runtime roles (so a re-run after a matrix change drops stale grants) are additions beyond the matrix.
 REVOKE ALL ON ALL TABLES IN SCHEMA app FROM fb_gateway, fb_hands, fb_booking;
 GRANT USAGE ON SCHEMA app TO fb_gateway, fb_hands, fb_booking;

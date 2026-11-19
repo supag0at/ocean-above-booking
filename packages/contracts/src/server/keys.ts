@@ -1,4 +1,4 @@
-// Deterministic keys: wake-job ids (M-7, A-01 §7.3), idempotency keys and messageKeys (M-6, A-02 §3.7),
+// The only home of these builders (M-12; tools has none). Deterministic keys: wake-job ids (M-7, A-01 §7.3), idempotency keys and messageKeys (M-6, A-02 §3.7),
 // trace helper (M-9). Pure string builders, no IO.
 
 export const SWEEP_PERIOD_MS = 15_000;
@@ -16,9 +16,7 @@ function assertSeq(seq: number): number {
 // ---- messageKey (A-02 §3.7) ----
 export const assistantMessageKey = (runId: string, attempt: number, n: number): string => `m:${runId}:${attempt}:${n}`;
 export const systemMessageKey = assistantMessageKey;
-// TODO(T01-REVIEW): CONTRACT M-6 says "toolResult messageKey is `msg:tr:{runId}:{toolCallId}`", but A-02 §3.7 says
-// messageKey = `tr:{runId}:{toolCallId}` and `msg:tr:...` is the *idempotencyKey* (= `msg:` + messageKey). Using
-// A-02 §3.7 (otherwise the idempotencyKey would become `msg:msg:tr:...`). M-6 looks like a conflation; confirm.
+// M-14: toolResult messageKey = `tr:{runId}:{toolCallId}`; the idempotencyKey is `msg:` + messageKey (below).
 export const toolResultMessageKey = (runId: string, toolCallId: string): string => `tr:${runId}:${toolCallId}`;
 export const templateMessageKey = (runId: string, templateId: string): string => `tpl:${runId}:${templateId}`;
 
