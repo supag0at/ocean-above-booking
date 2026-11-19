@@ -1,0 +1,4 @@
+#!/bin/sh
+# T00 guardrails (enable once per clone: git config core.hooksPath .githooks). Worktrees share this setting.
+root="$(git rev-parse --show-toplevel)" || exit 1
+exec node "$root/scripts/hooks/pre-commit.ts"

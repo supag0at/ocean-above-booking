@@ -1,0 +1,7 @@
+node_modules
+pnpm-lock.yaml
+docs
+spikes
+*.md
+locations.db
+infra/secrets

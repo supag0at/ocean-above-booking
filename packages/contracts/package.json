@@ -1,0 +1,13 @@
+{
+  "name": "@fb/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./web": "./src/web/index.ts",
+    "./server": "./src/server/index.ts",
+    "./tools": "./src/tools/index.ts",
+    "./flight": "./src/flight/index.ts"
+  },
+  "dependencies": {}
+}
