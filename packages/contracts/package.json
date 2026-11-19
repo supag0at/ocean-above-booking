@@ -9,5 +9,7 @@
     "./tools": "./src/tools/index.ts",
     "./flight": "./src/flight/index.ts"
   },
-  "dependencies": {}
+  "dependencies": {
+    "typebox": "1.4.7"
+  }
 }
