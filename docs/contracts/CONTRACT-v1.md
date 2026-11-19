@@ -1,7 +1,7 @@
-# 契约 v1（草案 v1.0-rc3；等 G1 冻结）
+# 契约 v1（v1.0，2026-11-19 G1 冻结）
 
 - 日期：2026-11-19；作者：父会话（C-01 合并，T1）
-- 状态：⏳ rc3（2026-11-19：M-2 改为不打码；新增 T01 起草后的裁定 M-11 到 M-20）。T01 会把本文落实成代码（契约包、迁移文件、契约测试），然后在 **G1** 由人冻结成 `v1.0`。
+- 状态：✅ **v1.0 已冻结**（2026-11-19 G1，用户原话："确认冻结"）。之后任何修改都要走 §5 的变更流程，升级版本号并广播。T01 已把本文落实成代码（契约包、迁移、契约测试）。
 - 依据：A-01 v0.6、A-02 v0.6、[decisions.md](../adr/decisions.md)（D-01 到 D-64、R-U1 到 R-U3）、S-01、R-01、R-02。
 - 设计文档不再复核（R-U2）：本文直接以两份 v0.6 为准，把它们之间剩下的差异裁定掉。
 
@@ -49,7 +49,6 @@
 | M-8 | 消费跟踪的列 | `last_user_seq`、`consumed_up_to_seq`、`open_run_id`、`oldest_unconsumed_at`、`last_agent_event_at`，含义以 A-01 §6.4 为准 | A2-15 |
 | M-9 | trace 头 | `traceparent` 必须带；`X-Trace-Id` 附带一份，值是 traceparent 里的 trace-id 部分；由 platform 的 HTTP 客户端自动加上 | X-9 |
 | M-10 | `AGENT_DELTA_MODE` | 默认值 `stream`，放行 `agent.delta` 和 `agent.reasoning_delta`；`off` 只是运维的应急开关 | D-64 |
-
 | M-11 | 契约包里各入口之间能不能互相 import（草稿里 `ErrorCode`、`Quote`、`TicketView`、execute 信封都被复制了多份） | **分层**：web ← flight ← tools ← server。web 什么都不 import；flight 只能 import web；tools 能 import web 和 flight；server 可以 import 全部。层级由 depcruise 规则 `contracts-flight-direction` 和 `contracts-tools-direction` 强制。`contracts-forbidden` 只作用于 `src/`，契约测试可以读文件 | 去掉重复定义，同时 web 入口仍然不会把服务端代码带进浏览器 |
 | M-12 | 单一来源 | `ErrorCode` 合并为一份（A-01 §4.6 的 19 个，加上 A-02 §5.3 agent 侧的码），放在 web，因为 `run_failed` 和 `booking.failed` 的 code 会出现在公共视图里；`run_failed.code` 和 `booking.failed.code` 的类型都用它。`Quote` / `QuoteLeg` / `TicketView` / `TicketSummary` 放在 web，flight 和 server 直接引用，不再复制。execute 信封只放在 tools（§1.1），删掉 server 里的那份。幂等键和 messageKey 的构造函数只放在 server，删掉 tools 里的那份 | 防止定义漂移 |
 | M-13 | **前端不能算价格** | `PRICE_PER_KM_USD` **只放在 flight**，web 里删掉。web 只提供展示用的格式化函数：`formatUsdCents`、`formatKm`，按 D-09 舍入，入参是 API 已经算好的值 | H-01：浏览器端不应该有任何能算出价格的东西 |
@@ -61,6 +60,7 @@
 | M-19 | 草稿里其他的 TODO | 接受下面这些做法：转写表取两份文档的并集，另外补上 Ð→D、Ħ→H、Þ→TH；`matchedBy` 可选；`list_my_tickets` 返回 `TicketView[]`；save/forget 的返回值是回显；`FlightCore` 的接口先按草稿，T03 实现时如果需要改，就上报；`run_` 前缀用随机串；记忆 ID 的前缀是 `m_`；登录用户名先校验长度 1..64，规范化后再校验 1..32 | 都在规范允许的范围内 |
 | M-20 | 数据库 | 保留 `REVOKE ALL … FROM PUBLIC` 和"先全部 REVOKE 再 GRANT"这两个补充；v1 的迁移和 GRANT 由 `00-roles.sh` 执行，不单独做 migrate 容器；compose 要把 `infra/db` 以只读方式挂进 postgres 容器（`INFRA_DB_DIR`）；密码只在初始化期间出现在容器内部 psql 进程的 argv 里，写进局限一节 | 数据库子块的 TODO |
 | M-21 | 整合时剩下的两处 | `booking.confirmed` 和 `booking.failed` 由 **gateway** 写入（A-01 §5.2、§3.3：booking 没有 events 表的授权，gateway 收到 booking 的同步应答后再写事件）；公共视图里 toolResult 那一支**不加** `kind`，前端按有没有 `toolCallId` 来区分（A-01 §9.4）；`list_my_tickets` 返回 `TicketView[]`；`ExecuteResponse.error.code` 保持为 agent 错误码的子集 | 都按负责方文档的原文 |
+
 ---
 
 ## 3. 全局常量和口径（T01 写进契约包，所有实现都只能引用这里，不能各自硬编码）
