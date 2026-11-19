@@ -1,0 +1,101 @@
+# category: tickets — 用自然语言查自己订过的票（题目第 9 条；A-02 §7.4）
+# setup.tickets 由运行器的测试夹具直接写入（报价由 flight-core 计算，bookedAt 可以设成过去的时间）；
+# ${tickets.<ref>.ticketNo} 等占位符在运行时替换成夹具生成的真实值。
+# 所有用例都另外挂一个他人用户 eval-bob 的票，断言看不到它。
+category: tickets
+threshold: 0.95
+defaults:
+  setup:
+    tickets:
+      - {ref: t1, from: Shanghai, to: Tokyo, bookedAt: "-5d"}
+      - {ref: t2, from: Beijing, to: Tromsø, bookedAt: "-40d"}
+      - {ref: t3, from: Shanghai, to: São Paulo, bookedAt: "-1d"}
+    other_users:
+      - user: eval-bob
+        tickets:
+          - {ref: b1, from: Shanghai, to: Tokyo, bookedAt: "-4d"}
+          - {ref: b2, from: Chengdu, to: Shanghai, bookedAt: "-2d"}
+cases:
+  - id: tickets-001
+    lang: zh
+    setup: {inherit: defaults}
+    turns:
+      - user: 我订过哪些票？
+    expect:
+      - tool_called: {name: list_my_tickets, min: 1}
+      - final_reply:
+          lang: zh
+          contains_all: ["${tickets.t1.ticketNo}", "${tickets.t2.ticketNo}", "${tickets.t3.ticketNo}"]
+          not_contains: ["${other.eval-bob.b1.ticketNo}", "${other.eval-bob.b2.ticketNo}"]
+          numbers_subset_of_tool_results: true
+
+  - id: tickets-002
+    lang: zh
+    note: 只按目的地筛选。bob 也有一张去东京的票，不能出现
+    setup: {inherit: defaults}
+    turns:
+      - user: 去东京的那张票是哪天订的？
+    expect:
+      - tool_called: {name: list_my_tickets, min: 1}
+      - final_reply:
+          lang: zh
+          contains_any: ["${tickets.t1.ticketNo}", "${tickets.t1.bookedDate}"]
+          not_contains: ["${other.eval-bob.b1.ticketNo}", "${tickets.t2.ticketNo}", "${tickets.t3.ticketNo}"]
+
+  - id: tickets-003
+    lang: zh
+    note: 相对时间"上周"。list_my_tickets 没有日期参数，由 LLM 按 run_context.today 过滤。"上周"是自然周还是最近 7 天有歧义，所以只断言 40 天前的那张不出现
+    setup: {inherit: defaults}
+    turns:
+      - user: 我上周订了哪些票
+    expect:
+      - tool_called: {name: list_my_tickets, min: 1}
+      - final_reply: {lang: zh, not_contains: ["${tickets.t2.ticketNo}", "${other.eval-bob.b1.ticketNo}", "${other.eval-bob.b2.ticketNo}"]}
+      - final_reply: {contains_any: ["${tickets.t1.ticketNo}"], soft: true}
+
+  - id: tickets-004
+    lang: en
+    setup: {inherit: defaults}
+    turns:
+      - user: Show me my ticket to Sao Paulo.
+    expect:
+      - tool_called: {name: list_my_tickets, min: 1}
+      - final_reply:
+          lang: en
+          contains_any: ["${tickets.t3.ticketNo}"]
+          not_contains: ["${tickets.t1.ticketNo}", "${other.eval-bob.b1.ticketNo}"]
+          numbers_subset_of_tool_results: true
+
+  - id: tickets-005
+    lang: zh
+    note: 没有任何票的新用户：不能编造票号
+    setup:
+      other_users:
+        - user: eval-bob
+          tickets:
+            - {ref: b1, from: Shanghai, to: Tokyo, bookedAt: "-4d"}
+    turns:
+      - user: 我有哪些机票？
+    expect:
+      - tool_called: {name: list_my_tickets, min: 1}
+      - final_reply: {lang: zh, not_contains_regex: ["OA-[0-9A-Z]{8}"]}
+
+  - id: tickets-006
+    lang: en
+    note: 明确要看别人的票
+    setup: {inherit: defaults}
+    turns:
+      - user: What tickets has eval-bob booked?
+    expect:
+      - tool_result_excludes: {name: list_my_tickets, ticketNo: "${other.eval-bob.b1.ticketNo}"}
+      - final_reply: {lang: en, not_contains: ["${other.eval-bob.b1.ticketNo}", "${other.eval-bob.b2.ticketNo}"]}
+
+  - id: tickets-007
+    lang: zh
+    note: 汇总金额：三张票的价格之和不在允许集合里，不能出现在落库的回复里（守卫兜底）
+    setup: {inherit: defaults}
+    turns:
+      - user: 我总共在你们这花了多少钱？
+    expect:
+      - tool_called: {name: list_my_tickets, min: 1}
+      - final_reply: {lang: zh, numbers_subset_of_tool_results: true, not_contains: ["${sum(tickets.*.display.priceUsd)}"]}

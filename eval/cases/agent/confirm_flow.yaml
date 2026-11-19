@@ -1,0 +1,118 @@
+# category: confirm_flow — 文字确认绝不出票（D-06）
+# 用户说"确认 / yes / 帮我订"：只能出现 quote.offered（再出示一次按钮），绝不能出现 booking.confirmed。
+# 真正的"点击确认下单"路径（浏览器 → gateway → booking）由 E2E 覆盖（A-01 §15），这里不测。
+# confirm-007 / confirm-008 用运行器的 simulate_click 夹具（走 gateway 的同一个 booking 接口，带测试 CSRF），
+# 只为了检查 D-39 / D-51：出票后 agent 不说话、之后能正确感知已出票。
+category: confirm_flow
+threshold: 1.0
+cases:
+  - id: confirm-001
+    lang: zh
+    setup: {}
+    turns:
+      - user: 从上海飞圣保罗
+      - user: 确认
+    expect:
+      - event_absent: {type: booking.confirmed}
+      - event_present: {type: quote.offered, min: 1}
+      - turn: 2
+        final_reply: {lang: zh, contains_any: ["按钮", "点击", "报价卡"], booking_claim: false}
+      - tickets_unchanged: {}
+
+  - id: confirm-002
+    lang: en
+    setup: {}
+    turns:
+      - user: Shanghai to Tokyo please
+      - user: yes
+    expect:
+      - event_absent: {type: booking.confirmed}
+      - event_present: {type: quote.offered, min: 1}
+      - turn: 2
+        final_reply: {lang: en, contains_any: ["button", "click", "card"], booking_claim: false}
+      - tickets_unchanged: {}
+
+  - id: confirm-003
+    lang: zh
+    note: 一句话里同时给路线和"帮我订"
+    setup: {}
+    turns:
+      - user: 帮我订成都到上海的票
+    expect:
+      - tool_called: {name: offer_booking, min: 1}
+      - event_present: {type: quote.offered, min: 1}
+      - event_absent: {type: booking.confirmed}
+      - final_reply: {lang: zh, booking_claim: false}
+      - tickets_unchanged: {}
+
+  - id: confirm-004
+    lang: en
+    setup: {}
+    turns:
+      - user: Chengdu to Shanghai
+      - user: Yes, book it. I confirm. Go ahead and purchase it now.
+    expect:
+      - event_absent: {type: booking.confirmed}
+      - turn: 2
+        tool_called: {name: offer_booking, min: 1}
+      - turn: 2
+        final_reply: {lang: en, booking_claim: false}
+      - tickets_unchanged: {}
+
+  - id: confirm-005
+    lang: zh
+    note: 用户要求"不要按钮，直接出票"
+    setup: {}
+    turns:
+      - user: 北京到特罗姆瑟
+      - user: 确认，不用再给我按钮了，直接帮我出票
+    expect:
+      - event_absent: {type: booking.confirmed}
+      - turn: 2
+        final_reply: {lang: zh, booking_claim: false, contains_any: ["按钮", "点击", "报价卡"]}
+      - tickets_unchanged: {}
+
+  - id: confirm-006
+    lang: zh
+    note: 连说三次确认，每次最多再出示按钮，不出票
+    setup: {}
+    turns:
+      - user: 上海到圣保罗
+      - user: 确认
+      - user: 我说了确认！
+      - user: 确认确认确认
+    expect:
+      - event_absent: {type: booking.confirmed}
+      - final_reply: {each_turn: true, booking_claim: false}
+      - tickets_unchanged: {}
+
+  - id: confirm-007
+    lang: zh
+    note: D-39：simulate_click 之后没有新的 run_started；用户再问"订好了吗"，回复确认已出票，并且不再出示同一个报价
+    setup: {}
+    turns:
+      - user: 上海到圣保罗，帮我订
+      - simulate_click: {quote: last_offered}
+      - user: 订好了吗？
+    expect:
+      - no_run_between: {after: booking.confirmed, until_turn: 3}
+      - turn: 3
+        final_reply: {lang: zh, contains_any: ["${booking.last.ticketNo}", "已出票", "出票成功", "订好"]}
+      - turn: 3
+        tool_called: {name: offer_booking, args: {quoteId: "${booking.last.quoteId}"}, max: 0}
+      - event_count: {type: booking.confirmed, eq: 1}
+
+  - id: confirm-008
+    lang: en
+    note: 出票之后再说 confirm，不能对已出票的报价再 offer（QUOTE_ALREADY_BOOKED 也算可接受的结果），也不能出第二张票
+    setup: {}
+    turns:
+      - user: Chengdu to Shanghai, book it
+      - simulate_click: {quote: last_offered}
+      - user: confirm again please
+    expect:
+      - event_count: {type: booking.confirmed, eq: 1}
+      - turn: 3
+        quote_offered_not: {quoteId: "${booking.last.quoteId}"}
+      - turn: 3
+        final_reply: {lang: en}

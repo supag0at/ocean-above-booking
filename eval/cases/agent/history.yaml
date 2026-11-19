@@ -1,0 +1,56 @@
+# category: history — 查看所有历史对话（题目第 10 条）
+# 这是界面功能（会话列表 + 回放），主要由 E2E 层覆盖（A-01 §15）。这里：
+#   - runner: e2e 的两条只登记要覆盖什么，agent 运行器跳过；
+#   - 另外两条是 agent 层的辅助检查：agent 看不到别的会话，不能编造；同一会话内能回答"刚才查了什么"。
+category: history
+threshold: 0.95
+cases:
+  - id: history-001
+    runner: e2e
+    lang: zh
+    note: 同一个用户建 3 个会话，各发一条消息；会话列表按最近更新排序列出全部 3 个；点开任一会话能回放用户消息、最终回复、报价卡、出票卡
+    covered_by: A-01 §15（T11/T12 E2E）
+    setup: {}
+    turns:
+      - user: 上海到东京
+      - new_session: {}
+      - user: Chengdu to Shanghai
+      - new_session: {}
+      - user: 北京到特罗姆瑟
+    expect:
+      - e2e: "GET /api/v1/sessions 返回 3 个会话；每个会话的事件回放包含它自己的 user.message 和最终回复"
+
+  - id: history-002
+    runner: e2e
+    lang: zh
+    note: 回放里带工具调用的消息显示为折叠的过程区（CONTRACT M-1，kind:'process'，内容是 processText），刷新后仍然存在；公共视图里永远没有 messageJson（CT-09）
+    covered_by: A-01 §15
+    setup: {}
+    turns:
+      - user: 上海到圣保罗
+    expect:
+      - e2e: "刷新后回放：process 消息可见且折叠；最终回复可见；响应体里没有 messageJson / thinking / system 消息"
+
+  - id: history-003
+    lang: zh
+    threshold: 0.8
+    note: 新会话问上一个会话的内容。agent 只能看到本会话和画像，不能编造；应引导用户去历史对话列表。画像里没有票，所以不应出现 Tokyo
+    setup: {}
+    turns:
+      - user: 上海到东京
+      - new_session: {}
+      - user: 我们上次聊了什么？
+    expect:
+      - session: 2
+        final_reply: {lang: zh, contains_any: ["历史", "对话列表", "之前的对话", "左侧"], not_contains: ["Tokyo", "东京"]}
+
+  - id: history-004
+    lang: en
+    note: 同一会话里回忆刚才的查询
+    setup: {}
+    turns:
+      - user: Shanghai to Sao Paulo
+      - user: Wait, which cities did I just ask about?
+    expect:
+      - turn: 2
+        final_reply: {lang: en, contains_all: ["Shanghai", "São Paulo"]}

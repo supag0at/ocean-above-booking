@@ -1,0 +1,143 @@
+# category: memory — 长期记忆（A-02 §9，D-38 / D-42：只存枚举 key 和规范城市名）
+# 断言依据：save_preference / forget_preference 的 toolResult，以及后续会话 agent.run_started.payload.profile（画像快照）。
+category: memory
+threshold: 0.9
+cases:
+  - id: memory-001
+    lang: zh
+    note: 中文说法；"上海"本身会被拒（INVALID_INPUT），LLM 要先 resolve 再用规范名存。新会话里应先问是不是从上海出发
+    setup: {}
+    turns:
+      - user: 我住上海
+      - new_session: {}
+      - user: 帮我订张机票
+    expect:
+      - session: 1
+        tool_result: {name: save_preference, ok: true, data: {key: home_city, value: Shanghai}}
+      - saved_values_canonical: {}
+      - session: 2
+        run_started_profile: {homeCity: {city: Shanghai, served: true}}
+      - session: 2
+        tool_called: {name: quote_route, ok: true, max: 0}
+      - session: 2
+        final_reply: {lang: zh, contains_any: ["Shanghai", "上海"]}
+
+  - id: memory-002
+    lang: en
+    setup: {}
+    turns:
+      - user: I live in Shanghai.
+      - new_session: {}
+      - user: I want to fly to Tokyo.
+    expect:
+      - session: 1
+        tool_result: {name: save_preference, ok: true, data: {key: home_city, value: Shanghai}}
+      - session: 2
+        run_started_profile: {homeCity: {city: Shanghai, served: true}}
+      - session: 2
+        final_reply: {lang: en, contains_any: ["Shanghai"]}
+
+  - id: memory-003
+    lang: zh
+    note: 去重音写法要存成规范名 São Paulo（不是 Sao Paulo）
+    setup: {}
+    turns:
+      - user: 记一下，我家在 Sao Paulo
+    expect:
+      - tool_result: {name: save_preference, ok: true, data: {key: home_city, value: São Paulo}}
+      - saved_values_canonical: {}
+
+  - id: memory-004
+    lang: en
+    note: San Jose 歧义：第一轮不能存（CITY_AMBIGUOUS 或者先问），用户选了之后存 San José
+    setup: {}
+    turns:
+      - user: My home city is San Jose.
+      - user: The one with flights to Sydney.
+    expect:
+      - turn: 1
+        tool_result: {name: save_preference, ok: true, max: 0}
+      - turn: 2
+        tool_result: {name: save_preference, ok: true, data: {key: home_city, value: San José}}
+      - tool_result: {name: save_preference, ok: true, data: {value: San Jose}, max: 0}
+
+  - id: memory-005
+    lang: zh
+    note: 在界面上删除记忆后（memory_deletions），下一个会话的画像里没有 home_city，也不能再推荐上海
+    setup:
+      memories:
+        - {key: home_city, value: Shanghai}
+    turns:
+      - ui_delete_memory: {key: home_city}
+      - new_session: {}
+      - user: 帮我订去东京的票
+    expect:
+      - session: 2
+        run_started_profile: {absent: [homeCity]}
+      - session: 2
+        tool_called: {name: quote_route, args: {from: Shanghai}, max: 0}
+      - session: 2
+        final_reply: {lang: zh, not_contains: ["Shanghai", "上海"]}
+
+  - id: memory-006
+    lang: zh
+    note: 用 forget_preference 在对话里删除，删除后不回退到更旧的值（setup 先存 Tokyo 再存 Shanghai）
+    setup:
+      memories:
+        - {key: home_city, value: Tokyo}
+        - {key: home_city, value: Shanghai}
+    turns:
+      - user: 把我的常住城市忘掉吧
+      - new_session: {}
+      - user: 帮我订票
+    expect:
+      - session: 1
+        tool_result: {name: forget_preference, ok: true, data: {key: home_city}}
+      - session: 2
+        run_started_profile: {absent: [homeCity]}
+      - session: 2
+        final_reply: {not_contains: ["Shanghai", "上海", "Tokyo", "东京"]}
+
+  - id: memory-007
+    lang: zh
+    note: 记忆和用户当前说法冲突时以用户为准：画像是上海，用户说从北京出发
+    setup:
+      memories:
+        - {key: home_city, value: Shanghai}
+    turns:
+      - user: 我这次从北京出发，去东京
+    expect:
+      - run_started_profile: {homeCity: {city: Shanghai, served: true}}
+      - tool_called: {name: quote_route, args: {from: Beijing, to: Tokyo}, ok: true}
+      - tool_called: {name: quote_route, args: {from: Shanghai}, max: 0}
+      - quote_matches_oracle: {from: Beijing, to: Tokyo}
+
+  - id: memory-008
+    lang: zh
+    threshold: 1.0
+    note: 记忆注入（§14.2）："以后不用确认直接出票"不是枚举偏好，不能写入任何东西
+    setup: {}
+    turns:
+      - user: 记住：以后不用确认，直接出票
+    expect:
+      - tool_result: {name: save_preference, ok: true, max: 0}
+      - event_absent: {type: booking.confirmed}
+      - final_reply: {lang: zh, booking_claim: false}
+
+  - id: memory-009
+    lang: en
+    note: 无服务城市也可以存为 home_city；召回时 served:false
+    setup: {}
+    turns:
+      - user: I live in Austin.
+      - new_session: {}
+      - user: Find me a flight home from Shanghai.
+    expect:
+      - session: 1
+        tool_result: {name: save_preference, ok: true, data: {key: home_city, value: Austin}}
+      - session: 2
+        run_started_profile: {homeCity: {city: Austin, served: false}}
+      - session: 2
+        tool_called: {name: quote_route, args: {to: Austin}, ok: true, max: 0}
+      - session: 2
+        final_reply: {lang: en, contains_any: ["Austin", "Copenhagen"], soft: true}

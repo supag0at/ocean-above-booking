@@ -1,0 +1,138 @@
+# category: resolve — 城市名解析：拼写错误、去掉重音、中文名、San Jose / San José 歧义、Tromsø、Wrocław
+# resolve_city 的输入断言：candidates 1..3 个，都是英文（不含 CJK）。规则见 deterministic/resolve.yaml。
+category: resolve
+threshold: 0.95
+cases:
+  - id: resolve-001
+    lang: zh
+    note: 苏黎世 → Zürich（ü 由 norm 处理，LLM 写 Zurich 即可）
+    setup: {}
+    turns:
+      - user: 从上海去苏黎世
+    expect:
+      - resolve_candidates_valid: {}
+      - tool_called: {name: quote_route, args: {from: Shanghai, to: Zürich}, ok: true}
+      - quote_matches_oracle: {from: Shanghai, to: Zürich}
+      - final_reply: {lang: zh}
+
+  - id: resolve-002
+    lang: en
+    note: 去掉重音的 Sao Paulo
+    setup: {}
+    turns:
+      - user: shanghai to sao paulo
+    expect:
+      - tool_called: {name: quote_route, args: {from: Shanghai, to: São Paulo}, ok: true}
+      - quote_matches_oracle: {from: Shanghai, to: São Paulo}
+
+  - id: resolve-003
+    lang: zh
+    threshold: 1.0
+    note: 圣何塞 → ambiguous。第 1 轮绝不能生成报价；第 2 轮用户按"连悉尼的那个"选中 San José
+    setup: {}
+    turns:
+      - user: 上海飞圣何塞
+      - user: 能飞悉尼的那个
+    expect:
+      - turn: 1
+        tool_result: {name: resolve_city, data: {status: ambiguous}}
+      - turn: 1
+        tool_called: {name: quote_route, ok: true, max: 0}
+      - turn: 1
+        event_absent: {type: quote.offered}
+      - turn: 1
+        final_reply: {lang: zh, contains_all: ["San Jose", "San José"]}
+      - turn: 2
+        tool_called: {name: quote_route, args: {from: Shanghai, to: San José}, ok: true}
+      - quote_matches_oracle: {from: Shanghai, to: San José}
+      - tool_called: {name: quote_route, args: {to: San Jose}, max: 0}
+
+  - id: resolve-004
+    lang: en
+    threshold: 1.0
+    note: 英文 San Jose 同样 ambiguous，即使用户的写法和其中一个完全一样（A-02 §7.1）
+    setup: {}
+    turns:
+      - user: Tokyo to San Jose
+      - user: The one that only has flights to Tokyo.
+    expect:
+      - turn: 1
+        tool_called: {name: quote_route, ok: true, max: 0}
+      - turn: 1
+        final_reply: {lang: en, contains_all: ["San Jose", "San José"]}
+      - turn: 2
+        tool_called: {name: quote_route, args: {from: Tokyo, to: San Jose}, ok: true}
+      - quote_matches_oracle: {from: Tokyo, to: San Jose}
+
+  - id: resolve-005
+    lang: zh
+    note: Tromso 不带 ø
+    setup: {}
+    turns:
+      - user: 北京去 Tromso
+    expect:
+      - tool_called: {name: quote_route, args: {from: Beijing, to: Tromsø}, ok: true}
+      - quote_matches_oracle: {from: Beijing, to: Tromsø}
+
+  - id: resolve-006
+    lang: en
+    note: Wroclaw 不带 ł；Wrocław 只和 Shanghai 直连
+    setup: {}
+    turns:
+      - user: Shanghai to Wroclaw
+    expect:
+      - tool_called: {name: quote_route, args: {from: Shanghai, to: Wrocław}, ok: true}
+      - quote_matches_oracle: {from: Shanghai, to: Wrocław}
+      - quote_data: {from: Shanghai, to: Wrocław, legs_count: 1}
+
+  - id: resolve-007
+    lang: en
+    note: 拼写错误 Shangai。LLM 多半直接在 candidates 里纠正成 Shanghai（exact）；如果走了 fuzzy（0.875 < 0.9），必须先问。两种情况下都不能报出别的城市
+    setup: {}
+    turns:
+      - user: Shangai to Tokyo
+    expect:
+      - tool_called: {name: quote_route, args: {from: Shanghai}, ok: true, max: 1}
+      - tool_called: {name: quote_route, args: {to: Tokyo}, ok: true, max: 1}
+      - quote_from_set: {from: [Shanghai], to: [Tokyo]}
+      - final_reply: {lang: en, contains_any: ["Shanghai"]}
+
+  - id: resolve-008
+    lang: en
+    note: 缩写 NYC，LLM 要翻成 New York
+    setup: {}
+    turns:
+      - user: NYC to London
+    expect:
+      - tool_called: {name: quote_route, args: {from: New York, to: London}, ok: true}
+      - quote_matches_oracle: {from: New York, to: London}
+
+  - id: resolve-009
+    lang: zh
+    note: 基辅：库里是 Kyiv，没有 Kiev。LLM 给 [Kiev] 会 not_found；正确做法是 candidates 里包含 Kyiv
+    setup: {}
+    turns:
+      - user: 从上海飞基辅
+    expect:
+      - tool_called: {name: quote_route, args: {from: Shanghai, to: Kyiv}, ok: true}
+      - quote_matches_oracle: {from: Shanghai, to: Kyiv}
+
+  - id: resolve-010
+    lang: zh
+    note: 圣彼得堡：库里是 Saint Petersburg（St. Petersburg 只会 fuzzy 0.81）
+    setup: {}
+    turns:
+      - user: 北京到圣彼得堡
+    expect:
+      - tool_called: {name: quote_route, args: {from: Beijing, to: Saint Petersburg}, ok: true}
+      - quote_matches_oracle: {from: Beijing, to: Saint Petersburg}
+
+  - id: resolve-011
+    lang: zh
+    note: 西安：candidates 写 Xian 或 Xi'an 都 exact；quote_route 的参数必须是规范名 Xi'an
+    setup: {}
+    turns:
+      - user: 上海到西安
+    expect:
+      - tool_called: {name: quote_route, args: {from: Shanghai, to: "Xi'an"}, ok: true}
+      - quote_matches_oracle: {from: Shanghai, to: "Xi'an"}

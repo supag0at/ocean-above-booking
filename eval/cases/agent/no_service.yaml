@@ -1,0 +1,124 @@
+# category: no_service — 10 个无服务城市全部覆盖（A-02 §7.6 黄金表，deterministic/nearest_served.yaml）
+# 每条都断言：① 没有任何一次成功的 quote_route 以这个城市为端点；② 没有 quote.offered；
+# ③ 最终回复提到了库里算出来的最近有服务城市；④ 最终回复没有用真实地理"纠正"成别的城市（geo_trap）。
+# 坐标是虚构的：Austin 最近的是 Copenhagen，不是 Dallas / Houston。
+category: no_service
+threshold: 0.95
+cases:
+  - id: nosvc-001
+    lang: zh
+    setup: {}
+    turns:
+      - user: 从上海飞阿布扎比
+    expect:
+      - unserved_handled: {city: Abu Dhabi, nearest: Tirana}
+      - final_reply: {lang: zh, contains_any: ["Tirana"], not_contains: ["Dubai", "Doha"]}
+
+  - id: nosvc-002
+    lang: en
+    note: 无服务城市作为出发地
+    setup: {}
+    turns:
+      - user: I want to fly from Stuttgart to Shanghai.
+    expect:
+      - unserved_handled: {city: Stuttgart, nearest: Novi Sad}
+      - final_reply: {lang: en, contains_any: ["Novi Sad"], not_contains: ["Frankfurt", "Munich"]}
+
+  - id: nosvc-003
+    lang: zh
+    setup: {}
+    turns:
+      - user: 上海到奥斯汀多少钱
+    expect:
+      - unserved_handled: {city: Austin, nearest: Copenhagen}
+      - final_reply: {lang: zh, contains_any: ["Copenhagen"], not_contains: ["Dallas", "Houston", "San Antonio"]}
+
+  - id: nosvc-004
+    lang: en
+    setup: {}
+    turns:
+      - user: Book me Shanghai to Srinagar.
+    expect:
+      - unserved_handled: {city: Srinagar, nearest: Edmonton}
+      - final_reply: {lang: en, contains_any: ["Edmonton"], not_contains: ["Delhi", "Amritsar"]}
+
+  - id: nosvc-005
+    lang: zh
+    setup: {}
+    turns:
+      - user: 我想去博卡拉，从上海出发
+    expect:
+      - unserved_handled: {city: Pokhara, nearest: Townsville}
+      - final_reply: {lang: zh, contains_any: ["Townsville"], not_contains: ["Kathmandu"]}
+
+  - id: nosvc-006
+    lang: en
+    note: 用户补了州名，LLM 仍然只能解析到库里的 Columbus
+    setup: {}
+    turns:
+      - user: Shanghai to Columbus, Ohio
+    expect:
+      - unserved_handled: {city: Columbus, nearest: Ottawa}
+      - final_reply: {lang: en, contains_any: ["Ottawa"], not_contains: ["Cincinnati", "Cleveland", "Chicago"]}
+
+  - id: nosvc-007
+    lang: zh
+    setup: {}
+    turns:
+      - user: 从上海去萨凡纳
+    expect:
+      - unserved_handled: {city: Savannah, nearest: Gyumri}
+      - final_reply: {lang: zh, contains_any: ["Gyumri"], not_contains: ["Atlanta", "Charleston"]}
+
+  - id: nosvc-008
+    lang: en
+    note: Miami 是枢纽，真实地理离 Fort Lauderdale 很近，是最容易被"常识"带偏的一条
+    setup: {}
+    turns:
+      - user: Shanghai to Fort Lauderdale
+    expect:
+      - unserved_handled: {city: Fort Lauderdale, nearest: Xiamen}
+      - final_reply: {lang: en, contains_any: ["Xiamen"], not_contains: ["Miami", "Orlando"]}
+
+  - id: nosvc-009
+    lang: zh
+    setup: {}
+    turns:
+      - user: 上海飞洛斯卡沃斯
+    expect:
+      - unserved_handled: {city: Los Cabos, nearest: Basra}
+      - final_reply: {lang: zh, contains_any: ["Basra"], not_contains: ["Mexico City", "Mazatlán", "Mazatlan"]}
+
+  - id: nosvc-010
+    lang: en
+    setup: {}
+    turns:
+      - user: How do I get from Shanghai to Iquitos?
+    expect:
+      - unserved_handled: {city: Iquitos, nearest: Hartford}
+      - final_reply: {lang: en, contains_any: ["Hartford"], not_contains: ["Lima"]}
+
+  - id: nosvc-011
+    lang: zh
+    note: 接受推荐后继续：第 2 轮按最近城市报价，路线和 oracle 一致（det-route-013）
+    setup: {}
+    turns:
+      - user: 上海到 Austin
+      - user: 那就去你推荐的那个城市吧
+    expect:
+      - turn: 1
+        unserved_handled: {city: Austin, nearest: Copenhagen}
+      - turn: 2
+        tool_called: {name: quote_route, args: {from: Shanghai, to: Copenhagen}, ok: true}
+      - quote_matches_oracle: {from: Shanghai, to: Copenhagen}
+      - event_absent: {type: booking.confirmed}
+
+  - id: nosvc-012
+    lang: en
+    note: 推荐里的距离只能是 nearestServed.distanceKm 原值（120.95），不能四舍五入成 121
+    setup: {}
+    turns:
+      - user: Shanghai to Austin. How far is the closest airport you serve from Austin?
+    expect:
+      - unserved_handled: {city: Austin, nearest: Copenhagen}
+      - final_reply: {lang: en, numbers_subset_of_tool_results: true, not_contains_regex: ["\\b121\\b", "\\b120\\.9\\b", "\\b121\\.0"]}

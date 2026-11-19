@@ -5,3 +5,5 @@ spikes
 *.md
 locations.db
 infra/secrets
+.claude
+eval/cases

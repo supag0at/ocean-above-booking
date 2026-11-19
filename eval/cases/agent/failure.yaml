@@ -1,0 +1,126 @@
+# category: failure — 故障注入（A-02 §12）
+# setup.faults 由运行器在测试环境里注入（hands / LLM 前面的故障代理，或 harness 的测试钩子）。字段见 README §3.3。
+# 每条都隐含断言：运行最终有结局（run_completed 或 run_failed），没有悬空的 toolCall（每个 toolCall 后都有 toolResult）。
+category: failure
+threshold: 1.0
+cases:
+  - id: failure-001
+    lang: zh
+    note: hands 一直不可用（5xx）。重试 2 次后作为工具错误交给 LLM；LLM 说暂时查不了，不编造路线和价格
+    setup:
+      faults:
+        - {target: hands, mode: http_503, tools: "*", times: always}
+    turns:
+      - user: 上海到东京
+    expect:
+      - tool_result: {name: "*", is_error: true, text_prefix: "ERROR HANDS_UNAVAILABLE", min: 1}
+      - hands_attempts_per_call: {eq: 3}
+      - event_present: {type: agent.run_completed}
+      - event_absent: {type: quote.offered}
+      - final_reply: {lang: zh, numbers_subset_of_tool_results: true, not_contains: ["Atlanta"], booking_claim: false}
+
+  - id: failure-002
+    lang: en
+    note: hands 前 2 次 503、第 3 次成功：同一个 toolCallId 重试，只生成 1 个报价
+    setup:
+      faults:
+        - {target: hands, mode: http_503, tools: [quote_route], times: 2}
+    turns:
+      - user: Shanghai to Tokyo
+    expect:
+      - tool_called: {name: quote_route, args: {from: Shanghai, to: Tokyo}, ok: true}
+      - quote_matches_oracle: {from: Shanghai, to: Tokyo}
+      - distinct_quote_ids_per_tool_call: {eq: 1}
+      - final_reply: {lang: en}
+
+  - id: failure-003
+    lang: zh
+    note: hands 超时（连接挂起）。规范没写 hands 请求的超时值，按"网络错误"处理（见 README 含糊点）
+    setup:
+      faults:
+        - {target: hands, mode: hang, tools: [quote_route], times: always}
+    turns:
+      - user: 上海到圣保罗
+    expect:
+      - tool_result: {name: quote_route, is_error: true, text_prefix: "ERROR HANDS_UNAVAILABLE"}
+      - event_absent: {type: quote.offered}
+      - final_reply: {lang: zh, booking_claim: false, numbers_subset_of_tool_results: true}
+
+  - id: failure-004
+    lang: en
+    note: LLM 前 2 次出错（5xx/429），第 3 次成功：等 1s、3s 后重建再试，最终正常完成
+    setup:
+      faults:
+        - {target: llm, mode: http_429, times: 2}
+    turns:
+      - user: Chengdu to Shanghai
+    expect:
+      - event_present: {type: agent.run_completed}
+      - event_absent: {type: agent.run_failed}
+      - quote_matches_oracle: {from: Chengdu, to: Shanghai}
+
+  - id: failure-005
+    lang: zh
+    note: LLM 一直出错：模板 llm_unavailable（中文文案）+ run_failed{LLM_ERROR}，模板先于 run_failed
+    setup:
+      faults:
+        - {target: llm, mode: http_500, times: always}
+    turns:
+      - user: 上海到东京
+    expect:
+      - template_message: {id: llm_unavailable, lang: zh}
+      - event_present: {type: agent.run_failed, payload: {code: LLM_ERROR}}
+      - event_order: [agent.message(meta.template=llm_unavailable), agent.run_failed]
+
+  - id: failure-006
+    lang: en
+    note: 输出被截断（finish_reason=length）两次：模板 + run_failed{LLM_LENGTH}
+    setup:
+      faults:
+        - {target: llm, mode: length, times: always}
+    turns:
+      - user: Shanghai to Tokyo
+    expect:
+      - template_message: {id: llm_unavailable, lang: en}
+      - event_present: {type: agent.run_failed, payload: {code: LLM_LENGTH}}
+
+  - id: failure-007
+    lang: zh
+    note: hands token 失效（401），重新申请一次仍 401：补齐悬空 toolCall，run_failed{HANDS_AUTH}
+    setup:
+      faults:
+        - {target: hands, mode: http_401, tools: "*", times: always}
+    turns:
+      - user: 上海到东京
+    expect:
+      - template_message: {id: llm_unavailable, lang: zh}
+      - event_present: {type: agent.run_failed, payload: {code: HANDS_AUTH}}
+      - no_dangling_tool_calls: {}
+
+  - id: failure-008
+    lang: zh
+    note: 在 quote_route 执行中途杀掉 harness（§14.2 崩溃恢复）。另一个 worker 接手（run_resumed），最终完成；报价和消息都不重复。INTERRUPTED 之后模型的实际表现只记录
+    setup:
+      faults:
+        - {target: harness, mode: crash_during_tool, tools: [quote_route], times: 1}
+    turns:
+      - user: 上海到圣保罗
+    expect:
+      - event_present: {type: agent.run_resumed, min: 1}
+      - event_present: {type: agent.run_completed}
+      - no_duplicate_message_keys: {}
+      - distinct_quote_ids_per_tool_call: {eq: 1}
+      - report: {interrupted_behaviour: true}
+
+  - id: failure-009
+    lang: en
+    note: 单次运行超过 120s。每次 LLM 响应前延迟 45s（低于单次请求上限 60s，避免先触发 LLM_ERROR）；正常流程要 3 次请求 → 第 3 次时超过 120s → 补齐 + 模板 run_timeout + run_failed{RUN_TIMEOUT}
+    setup:
+      faults:
+        - {target: llm, mode: delay, delay_ms: 45000, times: always}
+    turns:
+      - user: Shanghai to Tokyo
+    expect:
+      - template_message: {id: run_timeout, lang: en}
+      - event_present: {type: agent.run_failed, payload: {code: RUN_TIMEOUT}}
+      - no_dangling_tool_calls: {}
