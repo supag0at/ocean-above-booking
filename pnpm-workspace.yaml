@@ -1,0 +1,14 @@
+# pnpm workspace (D-15) + supply-chain settings (H-09).
+# NOTE (S-16): pnpm 12 reads these settings ONLY from this file; .npmrc keys are ignored
+# (verified in T00 with `pnpm config get ignore-scripts` → undefined when set only in .npmrc).
+packages:
+  - apps/*
+  - services/*
+  - packages/*
+
+# H-09: never run install/postinstall scripts of dependencies.
+ignoreScripts: true
+# H-09: refuse versions published less than 2 days ago (minutes). Equivalent of npm `min-release-age=2` used in S-01/pi.
+minimumReleaseAge: 2880
+# H-09: `pnpm add` writes exact versions.
+savePrefix: ''

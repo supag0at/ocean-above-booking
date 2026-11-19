@@ -1,0 +1,19 @@
+{
+  "name": "@fb/platform",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./log": "./src/log/index.ts",
+    "./trace": "./src/trace/index.ts",
+    "./config": "./src/config/index.ts",
+    "./secrets": "./src/secrets/index.ts",
+    "./http": "./src/http/index.ts",
+    "./fastify": "./src/fastify/index.ts",
+    "./pg": "./src/pg/index.ts",
+    "./redis": "./src/redis/index.ts"
+  },
+  "dependencies": {
+    "@fb/contracts": "workspace:*"
+  }
+}

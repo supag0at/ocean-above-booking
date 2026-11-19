@@ -1,0 +1,32 @@
+{
+  "name": "flight-booking",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.21.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "check": "node scripts/check.ts",
+    "typecheck": "node scripts/check.ts typecheck",
+    "lint": "node scripts/check.ts lint",
+    "depcruise": "node scripts/check.ts depcruise",
+    "test": "vitest run",
+    "hash": "node scripts/hash.ts",
+    "secrets": "node scripts/secrets.ts",
+    "manifest": "node scripts/manifest.ts",
+    "format": "prettier --write .",
+    "new-worktree": "node scripts/new-worktree.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.2",
+    "dependency-cruiser": "18.7.2",
+    "eslint": "10.15.0",
+    "prettier": "3.10.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.2",
+    "vite": "8.3.8",
+    "vitest": "5.1.0"
+  }
+}

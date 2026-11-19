@@ -1,0 +1,194 @@
+# Ocean Above — runtime topology skeleton (T00). Owner of the final file: T14.
+#
+# FINAL (CT-04 / CT-05 test these; change only via the parent session):
+#   - networks: subnets, internal flags, memberships and fixed addresses  (A-01 §2.2)
+#   - secrets:  declarations and the secret × container matrix            (A-01 §2.3, D-28)
+#   - no secret is ever passed as an environment variable; no ${...} interpolation of secrets
+# PLACEHOLDER (TODO(T14)): images, build, commands, healthchecks, data volumes, and all non-secret environment
+#   variables except the ones A-01 names (§2.2 gateway binds/peers, §2.3 PG_HOST/PG_DATABASE/PG_USER).
+#
+# Secret files live in infra/secrets/<name> (gitignored); only infra/secrets/<name>.example is committed.
+
+name: ocean-above
+
+x-node-service: &node-service
+  image: node:24-bookworm-slim # TODO(T14): per-service image built from infra/compose/<svc>.Dockerfile
+  user: '1000:1000'
+  read_only: true
+  restart: unless-stopped
+  command: ['sleep', 'infinity'] # TODO(T14): real entrypoint
+  environment: &node-env
+    NODE_ENV: production
+
+networks:
+  edge: # NOT internal: Caddy obtains certificates
+    ipam: { config: [{ subnet: 172.30.0.0/24 }] }
+  front:
+    internal: true
+    ipam: { config: [{ subnet: 172.30.1.0/24 }] }
+  app: # dynamic addresses (harness) only in .128/25; fixed addresses below .128
+    internal: true
+    ipam: { config: [{ subnet: 172.30.2.0/24, ip_range: 172.30.2.128/25 }] }
+  bk:
+    internal: true
+    ipam: { config: [{ subnet: 172.30.3.0/24 }] }
+  db_main:
+    internal: true
+    ipam: { config: [{ subnet: 172.30.4.0/24 }] }
+  db_booking:
+    internal: true
+    ipam: { config: [{ subnet: 172.30.5.0/24 }] }
+  egress: # NOT internal: harness → LLM provider (A-01 §2.7)
+    ipam: { config: [{ subnet: 172.30.6.0/24 }] }
+
+secrets:
+  pg_superuser_password: { file: ../secrets/pg_superuser_password }
+  pg_owner_password: { file: ../secrets/pg_owner_password }
+  pg_gateway_password: { file: ../secrets/pg_gateway_password }
+  pg_hands_password: { file: ../secrets/pg_hands_password }
+  pg_booking_password: { file: ../secrets/pg_booking_password }
+  redis_gateway_password: { file: ../secrets/redis_gateway_password }
+  redis_harness_password: { file: ../secrets/redis_harness_password }
+  deepseek_api_key: { file: ../secrets/deepseek_api_key }
+  harness_service_token: { file: ../secrets/harness_service_token }
+  booking_service_token: { file: ../secrets/booking_service_token }
+  hands_token_signing_key: { file: ../secrets/hands_token_signing_key }
+  cookie_secret: { file: ../secrets/cookie_secret }
+
+configs:
+  # Not a secret (A-01 §2.3): public half of hands_token_signing_key, mounted into gateway and hands.
+  hands_token_public_key: { file: ../secrets/hands_token_public_key.pem }
+
+services:
+  caddy:
+    image: caddy:2 # TODO(T14): build from infra/caddy/ (multi-stage, copies the apps/web build output, D-27)
+    restart: unless-stopped
+    ports: ['80:80', '443:443']
+    networks:
+      edge: {}
+      front: { ipv4_address: 172.30.1.10 }
+    # no secrets (A-01 §2.3)
+
+  gateway:
+    <<: *node-service
+    networks:
+      front: { ipv4_address: 172.30.1.20 }
+      app: { ipv4_address: 172.30.2.20 }
+      bk: { ipv4_address: 172.30.3.20 }
+      db_main: { ipv4_address: 172.30.4.20 }
+    environment:
+      <<: *node-env
+      PUBLIC_BIND: 172.30.1.20:8080
+      PUBLIC_ALLOWED_PEERS: 172.30.1.10/32 # caddy only
+      INTERNAL_BIND: 172.30.2.20:8081
+      INTERNAL_ALLOWED_PEERS: 172.30.2.128/25 # harness dynamic range
+      PG_HOST: 172.30.4.10
+      PG_DATABASE: app
+      PG_USER: fb_gateway
+    secrets:
+      - pg_gateway_password
+      - redis_gateway_password
+      - harness_service_token # verifies
+      - booking_service_token # holds
+      - hands_token_signing_key
+      - cookie_secret
+    configs:
+      - source: hands_token_public_key
+        target: /run/configs/hands_token_public_key.pem
+    depends_on: [postgres, redis]
+
+  harness:
+    <<: *node-service
+    networks:
+      app: {} # dynamic address, always inside 172.30.2.128/25
+      egress: {}
+    environment:
+      <<: *node-env
+      # health check only on 127.0.0.1:8084 — variable names: T09/T14
+    secrets:
+      - redis_harness_password
+      - deepseek_api_key
+      - harness_service_token # holds
+    depends_on: [redis]
+
+  hands:
+    <<: *node-service
+    networks:
+      app: { ipv4_address: 172.30.2.30 }
+      db_main: { ipv4_address: 172.30.4.30 }
+    environment:
+      <<: *node-env
+      # listen 172.30.2.30:8082, allowed peers 172.30.2.128/25 (harness only) — variable names: T08/T14
+      PG_HOST: 172.30.4.10
+      PG_DATABASE: app
+      PG_USER: fb_hands
+    secrets:
+      - pg_hands_password
+    configs:
+      - source: hands_token_public_key
+        target: /run/configs/hands_token_public_key.pem
+    volumes:
+      - type: bind
+        source: ../../locations.db
+        target: /data/locations.db # target path: placeholder (T08/T14); :ro and hands-only are final
+        read_only: true
+    depends_on: [postgres]
+
+  booking:
+    <<: *node-service
+    networks:
+      bk: { ipv4_address: 172.30.3.30 }
+      db_booking: { ipv4_address: 172.30.5.30 }
+    environment:
+      <<: *node-env
+      # listen 172.30.3.30:8083, allowed peers 172.30.3.20/32 (gateway only) — variable names: T07/T14
+      PG_HOST: 172.30.5.10
+      PG_DATABASE: app
+      PG_USER: fb_booking
+    secrets:
+      - pg_booking_password
+      - booking_service_token # verifies
+    depends_on: [postgres]
+
+  postgres:
+    image: postgres:16
+    user: '999:999'
+    restart: unless-stopped
+    networks:
+      db_main: { ipv4_address: 172.30.4.10 }
+      db_booking: { ipv4_address: 172.30.5.10 }
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_superuser_password # a path, not a secret
+    secrets:
+      - pg_superuser_password
+      - pg_owner_password # init only (00-roles.sh)
+      - pg_gateway_password # init only
+      - pg_hands_password # init only
+      - pg_booking_password # init only
+    # TODO(T01/T14): volumes for data, infra/db/init/ mounted at /docker-entrypoint-initdb.d, pg_hba from A-01 §2.2
+
+  redis:
+    image: redis:7
+    user: '999:999'
+    restart: unless-stopped
+    networks:
+      app: { ipv4_address: 172.30.2.40 }
+    secrets:
+      - redis_gateway_password
+      - redis_harness_password
+    # TODO(T14): entrypoint infra/redis/entrypoint.sh (aclfile on tmpfs), AOF everysec, data volume
+
+  migrate:
+    <<: *node-service
+    restart: 'no'
+    networks:
+      db_main: { ipv4_address: 172.30.4.40 }
+    environment:
+      <<: *node-env
+      PG_HOST: 172.30.4.10
+      PG_DATABASE: app
+      PG_USER: fb_owner
+    secrets:
+      - pg_owner_password
+    depends_on: [postgres]
