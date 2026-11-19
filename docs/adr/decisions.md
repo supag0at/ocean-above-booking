@@ -171,3 +171,5 @@
   - Opus medium：T03 flight-core、T06 gateway、T07 booking、T08 hands、T09 harness；
   - Sonnet：T10 memory、T11 前端。
   另有两个子 agent：T04 oracle（Sonnet，和 flight-core 代码隔离）、T13a 评测用例（Opus medium）。各任务的规划和 manifest 在 a3d9c77 里。
+- 2026-11-19：T04 oracle 已提交（bed5123、6cc9161）：490,700 个城市对，10 个无服务城市的推荐和 R-01 一致。契约升到 v1.0.1，新增 M-22，只是澄清打平规则和舍入口径。
+  - **异常**：W3 的 7 个会话**全部没有启动**。app 报"setup did not finish"，worktree 也没有创建，所以给 T03、T08 的 M-22 广播没有送达。这些会话还在，按 app 的提示不能由父会话自动重启，需要人来决定怎么处理。
