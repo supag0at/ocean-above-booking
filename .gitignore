@@ -1,0 +1,25 @@
+# secrets — never commit (D-28, A-01 §2.3)
+.env
+.env.*
+!.env.example
+infra/secrets/*
+!infra/secrets/*.example
+
+# dependencies
+node_modules/
+
+# build output
+dist/
+build/
+out/
+coverage/
+*.tsbuildinfo
+.vite/
+
+# tooling caches
+.eslintcache
+.turbo/
+
+# OS / editor
+.DS_Store
+Thumbs.db
