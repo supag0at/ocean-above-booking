@@ -242,6 +242,7 @@ def cmd_dump(data, out):
 
 
 def main():
+    sys.stdout.reconfigure(encoding="utf-8")  # Windows consoles default to GBK; city names contain non-ASCII
     p = argparse.ArgumentParser()
     sp = p.add_subparsers(dest="cmd", required=True)
     r = sp.add_parser("route")
