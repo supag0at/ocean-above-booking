@@ -167,3 +167,7 @@
   - Playwright 这次**没有安装**：它需要下载浏览器，和 `ignoreScripts` 冲突。T15 开发时作为依赖例外单独申请。
 - 2026-11-19：T01 和 T02 已完成（提交见 git log）。契约 rc3 增加 M-11 到 M-21；main 上 `pnpm check` 9/9 通过，274 个测试全部通过。其中契约测试 CT-01/02/04/05/06/07/08/09/10/11 已落地；CT-03 由 T00 的护栏测试和 depcruise 覆盖；CT-12 留给 T09。T02 留下的 TODO 父会话按执行者的方案接受：HTTP 只重试幂等请求，最多 2 次；不提供从环境变量读取机密的开发回退；未知路由和 415 复用 `VALIDATION_FAILED`，状态码返回真实值。**进入 G1，等人冻结契约。**
 - 2026-11-19：**G1 通过**，用户原话："确认冻结"。契约 v1.0 冻结。用户认为偏离计划的几处（D-69 React 19、Playwright 延后、补上 T02）"都是小问题"。CONTRACT-v1 的表格格式已修复：表格中间多了空行，表格后面缺空行。开始派发 W3。
+- 2026-11-19：**W3 已派发**。共 7 个开发会话，每个都有自己的 worktree，从 main 切出，分支改名为 `task/<ID>`：
+  - Opus medium：T03 flight-core、T06 gateway、T07 booking、T08 hands、T09 harness；
+  - Sonnet：T10 memory、T11 前端。
+  另有两个子 agent：T04 oracle（Sonnet，和 flight-core 代码隔离）、T13a 评测用例（Opus medium）。各任务的规划和 manifest 在 a3d9c77 里。
