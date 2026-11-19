@@ -1,4 +1,4 @@
-# 契约 v1（v1.0，2026-11-19 G1 冻结）
+# 契约 v1（v1.0.1，2026-11-19；v1.0 在 G1 冻结）
 
 - 日期：2026-11-19；作者：父会话（C-01 合并，T1）
 - 状态：✅ **v1.0 已冻结**（2026-11-19 G1，用户原话："确认冻结"）。之后任何修改都要走 §5 的变更流程，升级版本号并广播。T01 已把本文落实成代码（契约包、迁移、契约测试）。
@@ -60,6 +60,7 @@
 | M-19 | 草稿里其他的 TODO | 接受下面这些做法：转写表取两份文档的并集，另外补上 Ð→D、Ħ→H、Þ→TH；`matchedBy` 可选；`list_my_tickets` 返回 `TicketView[]`；save/forget 的返回值是回显；`FlightCore` 的接口先按草稿，T03 实现时如果需要改，就上报；`run_` 前缀用随机串；记忆 ID 的前缀是 `m_`；登录用户名先校验长度 1..64，规范化后再校验 1..32 | 都在规范允许的范围内 |
 | M-20 | 数据库 | 保留 `REVOKE ALL … FROM PUBLIC` 和"先全部 REVOKE 再 GRANT"这两个补充；v1 的迁移和 GRANT 由 `00-roles.sh` 执行，不单独做 migrate 容器；compose 要把 `infra/db` 以只读方式挂进 postgres 容器（`INFRA_DB_DIR`）；密码只在初始化期间出现在容器内部 psql 进程的 argv 里，写进局限一节 | 数据库子块的 TODO |
 | M-21 | 整合时剩下的两处 | `booking.confirmed` 和 `booking.failed` 由 **gateway** 写入（A-01 §5.2、§3.3：booking 没有 events 表的授权，gateway 收到 booking 的同步应答后再写事件）；公共视图里 toolResult 那一支**不加** `kind`，前端按有没有 `toolCallId` 来区分（A-01 §9.4）；`list_my_tickets` 返回 `TicketView[]`；`ExecuteResponse.error.code` 保持为 agent 错误码的子集 | 都按负责方文档的原文 |
+| M-22 | 打平规则和舍入写得不够具体（T04 提出） | **v1.0.1 澄清**：①"字典序"指对原始城市名逐个比较 Unicode 码点（JS 的 `<` 比较或者 Python 默认的字符串比较），**不用 `localeCompare`，不忽略大小写**；比较对象是途经城市名组成的序列。② `priceCents = Math.round(totalKm × 13)`，正数时是四舍五入。③距离平局的容差是 1e-6 km，按"每个候选都和当前最优比较"的方式处理。④只产生简单路径（不重复经过同一个城市） | 两个独立实现要做全量对拍，口径必须逐字一致 |
 
 ---
 
