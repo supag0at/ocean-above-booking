@@ -1,0 +1,35 @@
+# T00 scaffold & guardrails — whitelist (docs/tasks/T00.md "只能改").
+# NOTE: T00 cannot pass its own guardrails by construction (it creates protected files and the scaffold spans
+# frontend + backend shells). See T00.md 汇报 → 待决策 D-T00-1.
+package.json
+pnpm-workspace.yaml
+pnpm-lock.yaml
+.npmrc
+.node-version
+.gitignore
+.gitattributes
+.editorconfig
+.prettierrc.json
+.prettierignore
+.dependency-cruiser.cjs
+eslint.config.js
+tsconfig.base.json
+tsconfig.json
+vitest.config.ts
+README.md
+apps/*/package.json
+apps/*/tsconfig.json
+apps/*/src/index.ts
+services/*/package.json
+services/*/tsconfig.json
+services/*/src/index.ts
+packages/*/package.json
+packages/*/tsconfig.json
+packages/*/src/index.ts
+packages/*/src/*/index.ts
+scripts/**
+.githooks/**
+infra/compose/**
+infra/secrets/*.example
+docs/tasks/T00.manifest
+docs/tasks/T00.md

@@ -4,7 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@12.21.0",
   "engines": {
-    "node": ">=24"
+    "node": ">=22.19"
   },
   "scripts": {
     "check": "node scripts/check.ts",
