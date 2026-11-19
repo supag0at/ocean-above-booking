@@ -93,9 +93,10 @@ const forbidden = [
   // ---------------------------------------------------------------- packages/contracts
   {
     name: 'contracts-forbidden',
-    comment: 'A-01 §1.2 contracts 禁止: 任何 workspace 包、任何网络或文件 IO.',
+    comment:
+      'A-01 §1.2 contracts 禁止: 任何 workspace 包、任何网络或文件 IO. (CONTRACT-v1 M-11: applies to src/ only; contract tests may read files.)',
     severity: 'error',
-    from: { path: '^packages/contracts/' },
+    from: { path: '^packages/contracts/src/' },
     to: { path: any('^(apps|services|packages)/', '^@fb/', CORE_IO), pathNot: CONTRACTS_ANY },
   },
   {
@@ -112,6 +113,21 @@ const forbidden = [
     severity: 'error',
     from: { path: '^packages/contracts/src/', pathNot: '^packages/contracts/src/web/' },
     to: { pathNot: any(CONTRACTS_ANY, TYPEBOX, core('crypto')) },
+  },
+
+  {
+    name: 'contracts-flight-direction',
+    comment: 'CONTRACT-v1 M-11: entry layering web <- flight <- tools <- server. flight may import web only.',
+    severity: 'error',
+    from: { path: '^packages/contracts/src/flight/' },
+    to: { path: any('^packages/contracts/src/(tools|server)/', '^@fb/contracts/(tools|server)(/|$)') },
+  },
+  {
+    name: 'contracts-tools-direction',
+    comment: 'CONTRACT-v1 M-11: tools may import web and flight, never server.',
+    severity: 'error',
+    from: { path: '^packages/contracts/src/tools/' },
+    to: { path: any('^packages/contracts/src/server/', '^@fb/contracts/server(/|$)') },
   },
 
   // ---------------------------------------------------------------- packages/flight-core

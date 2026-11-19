@@ -1,5 +1,19 @@
 # 契约 CHANGELOG
 
+## v1.0-rc3（2026-11-19，父会话）
+- T01 由 4 个 Sonnet 子块起草（提交 c5af5e2），父会话处理了它们提出的 TODO(T01-REVIEW)，结论记为 M-11 到 M-20：
+  - 契约包各入口按层次引用；
+  - 每个类型只保留一个定义来源；
+  - 前端不能计算价格；
+  - 修正 M-6 的笔误；
+  - 不使用 `format`；
+  - `agent.message` 改成按 role 区分的联合类型；
+  - 补齐 `escapeUserText`；
+  - 数据库的几处细节。
+- depcruise 新增两条规则：`contracts-flight-direction`、`contracts-tools-direction`；`contracts-forbidden` 只检查 `src/`。
+- CT-07 交给 T02 platform，CT-12 交给 T09。
+- 发现 DAG 里漏了一个任务：`packages/platform` 没有分配负责人。现补为 **T02 platform**，放进 W2，和 T01 的整合并行进行。
+
 ## v1.0-rc2（2026-11-19，父会话）
 - M-2 和 M-4：过程区和 reasoning **不打码**（用户原话："不需要打码"）。`processText` 存原文；去掉 `MASK_TOKEN`；A-02 §8.7 和 A-01 A2-17 作废。
 - 受影响的会话：没有正在运行的设计会话（A-01、A-02 已经结束，不再修改，以本文为准）。T01 和 T09 按 rc2 实现。
