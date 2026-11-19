@@ -1,0 +1,3 @@
+# T08 hands — whitelist
+services/hands/**
+docs/tasks/T08.md

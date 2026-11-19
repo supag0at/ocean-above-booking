@@ -1,0 +1,3 @@
+# T03 flight-core — whitelist
+packages/flight-core/**
+docs/tasks/T03.md

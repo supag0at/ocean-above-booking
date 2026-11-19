@@ -1,0 +1,3 @@
+# T07 booking — whitelist
+services/booking/**
+docs/tasks/T07.md

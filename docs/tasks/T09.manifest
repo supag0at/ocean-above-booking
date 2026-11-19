@@ -1,0 +1,3 @@
+# T09 harness — whitelist
+services/harness/**
+docs/tasks/T09.md

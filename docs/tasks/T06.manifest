@@ -1,0 +1,3 @@
+# T06 gateway — whitelist
+services/gateway/**
+docs/tasks/T06.md

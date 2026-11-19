@@ -1,0 +1,3 @@
+# T11 web (frontend only, R-U1) — whitelist
+apps/web/**
+docs/tasks/T11.md

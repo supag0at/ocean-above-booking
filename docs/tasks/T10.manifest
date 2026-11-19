@@ -1,0 +1,3 @@
+# T10 memory — whitelist
+packages/memory/**
+docs/tasks/T10.md
