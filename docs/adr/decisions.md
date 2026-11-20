@@ -208,3 +208,4 @@
   5. 渲染时清洗控制字符并转义，防止注入。
   6. preferred_language 不在 zh/en 内就视为无偏好。
   另：T03 提出的 `score` 保留 4 位小数，记为待补的契约澄清（M-25），W4 开始前写入 CONTRACT。
+- 2026-11-20：用户原话："现在进入联调。" 契约升到 v1.1.1，补上 M-25（score 保留 4 位小数，澄清，不改行为）。派发 W4 的第一段：T12a（只改 apps/web）和 T12b（只改 services 和 scripts/integration），各自一个 worktree。T14、T15、T13b 等联调完成后再派。

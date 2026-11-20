@@ -1,5 +1,8 @@
 # 契约 CHANGELOG
 
+## v1.1.1（2026-11-20，父会话，澄清，不改变行为）
+- M-25：`CityMatch.score` 保留 4 位小数，排序用未舍入的分数。flight-core 已经按这个实现（`roundScore`）。W4 开始前补进契约。
+
 ## v1.1.0（2026-11-19，父会话）
 - M-24：新增 `checkToolArgs`、hands token 编解码；flight-core 可用 node:fs；CityMatch 加可选 score；记忆 ID 改用 uuid（撤销 m_）；tickets-insert 护栏放行服务测试目录；模板和出票正则留在 harness 本地。
 - 受影响的会话：T03、T06、T08、T09，均已广播。

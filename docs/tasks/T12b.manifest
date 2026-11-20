@@ -1,0 +1,4 @@
+# T12b backend integration — whitelist
+services/**
+scripts/integration/**
+docs/tasks/T12b.md
