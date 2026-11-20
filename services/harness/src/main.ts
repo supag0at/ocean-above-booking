@@ -25,6 +25,8 @@ function readConfig(env: NodeJS.ProcessEnv = process.env): Record<string, string
   SECRETS_DIR: string;
   HARNESS_CONCURRENCY: number;
   LOG_LEVEL: string;
+  /** unset: createLlm keeps the DeepSeek catalog base URL */
+  LLM_BASE_URL?: string;
 } {
   const int = (k: string, d: number): number => {
     const v = env[k];
@@ -34,6 +36,8 @@ function readConfig(env: NodeJS.ProcessEnv = process.env): Record<string, string
     return n;
   };
   const str = (k: string, d: string): string => (env[k] === undefined || env[k] === '' ? d : (env[k] as string));
+  // empty means unset: do not override the catalog URL (https://api.deepseek.com)
+  const llmBase = env.LLM_BASE_URL;
   return {
     REDIS_HOST: str('REDIS_HOST', 'redis'),
     REDIS_PORT: int('REDIS_PORT', 6379),
@@ -43,6 +47,7 @@ function readConfig(env: NodeJS.ProcessEnv = process.env): Record<string, string
     SECRETS_DIR: str('SECRETS_DIR', '/run/secrets'),
     HARNESS_CONCURRENCY: int('HARNESS_CONCURRENCY', 4),
     LOG_LEVEL: str('LOG_LEVEL', 'info'),
+    ...(typeof llmBase === 'string' && llmBase !== '' ? { LLM_BASE_URL: llmBase } : {}),
   };
 }
 
@@ -67,8 +72,12 @@ export async function main(): Promise<void> {
     secrets.get('harness_service_token'),
   );
   const hands = new HttpHands(createHttpClient({ baseUrl: cfg.HANDS_URL }));
-  // the key is handed to pi through getApiKey only; it never enters a log line or the LLM context
-  const llm = createLlm({ apiKey: () => secrets.get('deepseek_api_key') });
+  // the key is handed to pi through getApiKey only; it never enters a log line or the LLM context.
+  // LLM_BASE_URL is optional: unset keeps the DeepSeek catalog address; integration points it at a local stand-in.
+  const llm = createLlm({
+    apiKey: () => secrets.get('deepseek_api_key'),
+    ...(cfg.LLM_BASE_URL !== undefined ? { baseUrl: cfg.LLM_BASE_URL } : {}),
+  });
   const deps = {
     session,
     hands,
