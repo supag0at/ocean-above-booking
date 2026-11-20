@@ -179,3 +179,11 @@
 - 2026-11-20：用户要求所有会话暂停（原话："当前所有子任务跑完全部休息一会儿，暂停不派发新的子任务"）。暂停时的状态：T03、T07、T10、T11 已完成，等核对合并；T06、T08、T09 做到一半被停下，未提交的改动留在各自的 worktree 里。（补记：此前记录"本机 Docker 当前没有运行"有误，T07 实测 Docker 29.2.1 在运行，跳过测试的原因是父会话的 shell 连不上 Docker 的管道。）
 - 2026-11-20：**总控从 Claude Code 迁到 Cursor**。用户原话："我们就不去 fork 子 session 了。在 cursor 上起子 agents 就行。" 往后执行单元只用 Cursor 的子 agent，不再 fork 会话或新开会话；子 agent 运行期间不能和父会话通信，遇到阻塞写进汇报，跑完后由父会话处理。原 Claude Code 的会话记录用户自己保存，留作 prompt history；Cursor 这边的记录之后另行导出。
 - 2026-11-20：用户原话："t06 -08 -09 上次还没跑完所有。你这里试着派3个子 agent，接续上一次的工作。跑完这一个wave先。" → 派了 3 个 Cursor 子 agent（T2，Opus medium），分别在原来的 worktree 和 `task/<ID>` 分支上接着做 T06、T08、T09。简报里转达了 M-23、M-24、T07 给出的 booking 调用格式（含 `alreadyBooked`）、T03 的 `createFlightCore({ dbPath })` 签名和 `score` 保留 4 位小数。T09 要先合并 main 的 v1.1.0。
+- 2026-11-20：**W3 接续波完成**。三个子 agent 都已交回，父会话在每个分支上各自跑了一遍 `pnpm check`，都是 9/9：
+  - T06（2d96e91）：364 个测试；
+  - T08（55a9102）：368 个测试；
+  - T09（d8c8f02）：454 个测试通过、5 个跳过。
+  三个分支的改动都没有越出 manifest，工作区干净，没有遗留容器。
+  - **核对时发现的问题**：T09 那 5 个跳过的用例，是"真实 Redis 上的租约、fence 和崩溃接手"（对应验收 4、5）。它们需要预先在 6390 端口起好 Redis，没有就静默跳过；T09 汇报里写的是"每一遍都实际运行了"。父会话临时起了 redis:7 补跑，9/9 通过，结论成立。待办：W4 里让这些用例像 T06、T08 那样通过 Docker API 自己起容器，或者在 CI 里把跳过当作失败。
+  - 待人拍板（汇总自三份汇报）：T06 的 session key 用 HMAC 派生；`alreadyBooked`；`HANDS_AUTH` 错误码；D-53 的依据被 V6 推翻；V17（Node 24）；T09 的 3 项取舍；超过 128 KB 返回 413；不变量测试的 1.5 秒执行余量；没有 Docker 时测试是否允许跳过。
+  - 父会话待办：修契约里 `ExecuteErrorResponse.error.code` 被推导成 `never` 的问题；T02 里 `commandTimeoutMs: 0` 关不掉超时，会让 BullMQ worker 内存溢出，影响 T09；把 hands、booking、gateway 的环境变量名和收窄后的 ACL（gateway、harness 需要 `+info`）转给 T14。
