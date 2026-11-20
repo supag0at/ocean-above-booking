@@ -29,7 +29,9 @@ export function estimateTokens(text: string): number {
 export function messageText(m: AgentMessage): string {
   switch (m.role) {
     case 'user':
-      return typeof m.content === 'string' ? m.content : m.content.map((c) => (c.type === 'text' ? c.text : '')).join('');
+      return typeof m.content === 'string'
+        ? m.content
+        : m.content.map((c) => (c.type === 'text' ? c.text : '')).join('');
     case 'system':
       return typeof m.content === 'string' ? m.content : m.content.map((c) => c.text).join('');
     case 'toolResult':
@@ -179,7 +181,13 @@ export function summarize(events: readonly Ev[], boundaryRunId: string): string 
   for (const e of ofType(events, 'agent.message')) {
     const p = e.payload;
     if (p.role !== 'toolResult' || !foldedIds.has(p.runId) || p.toolName !== 'quote_route' || p.isError) continue;
-    const q = p.data as { quoteId?: string; from?: string; to?: string; legs?: { from: string; to: string }[]; transferCities?: string[] };
+    const q = p.data as {
+      quoteId?: string;
+      from?: string;
+      to?: string;
+      legs?: { from: string; to: string }[];
+      transferCities?: string[];
+    };
     if (typeof q?.quoteId !== 'string' || typeof q.from !== 'string' || typeof q.to !== 'string') continue;
     const transfers = q.transferCities ?? [];
     const tail =

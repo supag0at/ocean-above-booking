@@ -36,7 +36,10 @@ export function renderRunContext(p: PayloadOf<'agent.run_started'>): string {
     for (const r of routes) rows.push(kv('frequent_route', `${r.from} -> ${r.to} (${r.count})`));
     if (prof.lastTicket) {
       rows.push(
-        kv('last_ticket', `${prof.lastTicket.from} -> ${prof.lastTicket.to} (${prof.lastTicket.bookedAt.slice(0, 10)})`),
+        kv(
+          'last_ticket',
+          `${prof.lastTicket.from} -> ${prof.lastTicket.to} (${prof.lastTicket.bookedAt.slice(0, 10)})`,
+        ),
       );
     }
     if (prof.ticketCount > 0) rows.push(kv('ticket_count', prof.ticketCount));
@@ -65,7 +68,12 @@ export function renderBookingConfirmed(p: PayloadOf<'booking.confirmed'>): strin
 }
 
 export function renderBookingFailed(p: PayloadOf<'booking.failed'>): string {
-  return lines(['<system_event type="booking.failed">', kv('quote_id', p.quoteId), kv('code', p.code), '</system_event>']);
+  return lines([
+    '<system_event type="booking.failed">',
+    kv('quote_id', p.quoteId),
+    kv('code', p.code),
+    '</system_event>',
+  ]);
 }
 
 export const GUARD_INSTRUCTION =

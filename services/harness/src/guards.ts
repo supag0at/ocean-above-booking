@@ -23,7 +23,7 @@ export function preprocess(text: string): string {
 }
 
 // ---- extraction ----
-const NUM_RE = /\d{1,3}(?:[,  ]\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?/g;
+const NUM_RE = /\d{1,3}(?:[,\u00A0 ]\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?/g;
 
 export interface ExtractedNumber {
   readonly raw: string;
@@ -40,7 +40,7 @@ export function extractNumbers(preprocessed: string): ExtractedNumber[] {
   for (const m of preprocessed.matchAll(NUM_RE)) {
     const start = m.index;
     let end = start + m[0].length;
-    let n = Number(m[0].replace(/[,  ]/g, ''));
+    let n = Number(m[0].replace(/[,\u00A0 ]/g, ''));
     const suffix = preprocessed.slice(end).match(/^\s?(万|k|K)(?![A-Za-z])/);
     if (suffix) {
       n *= suffix[1] === '万' ? 10000 : 1000;
@@ -63,14 +63,28 @@ export function extractNumbers(preprocessed: string): ExtractedNumber[] {
 export function normValue(v: unknown): string | undefined {
   if (typeof v === 'number' && Number.isFinite(v)) return v.toFixed(2);
   if (typeof v === 'string') {
-    const n = Number(v.replace(/[,  ]/g, ''));
+    const n = Number(v.replace(/[,\u00A0 ]/g, ''));
     if (v.trim() !== '' && Number.isFinite(n)) return n.toFixed(2);
   }
   return undefined;
 }
 
 // ---- classification ----
-const PRICE_WORDS = ['US$', 'USD', '$', '美元', '美金', '刀', 'dollar', 'price', '价格', '票价', '费用', 'fare', 'cost'];
+const PRICE_WORDS = [
+  'US$',
+  'USD',
+  '$',
+  '美元',
+  '美金',
+  '刀',
+  'dollar',
+  'price',
+  '价格',
+  '票价',
+  '费用',
+  'fare',
+  'cost',
+];
 const DIST_WORDS = ['km', '公里', '千米', 'kilometer', '距离', '里程', 'distance'];
 const WINDOW = 16;
 
@@ -94,9 +108,8 @@ function nearest(text: string, start: number, end: number, words: readonly strin
 export type NumberContext = 'price' | 'distance' | 'both' | 'none';
 
 /**
- * A number near both a price word and a distance word is classified by the NEARER word ("18000 公里，价格 2340 美元"
- * must not put 18000 in price context). Equal distance -> 'both' (must satisfy both sets). Harness-local reading of
- * §8.4, which does not say how to resolve overlapping windows.
+ * CONTRACT M-23 ①: a number near both a price word and a distance word belongs to the NEARER word; at equal distance
+ * ('both') it passes if it is in EITHER the price or the distance set.
  */
 export function classify(text: string, n: ExtractedNumber): NumberContext {
   const p = nearest(text, n.start, n.end, PRICE_WORDS);
@@ -114,7 +127,11 @@ export interface AllowSets {
   readonly sys: ReadonlySet<string>;
 }
 
-function walk(v: unknown, visit: (key: string, value: unknown, parentKey: string | undefined) => void, parent?: string): void {
+function walk(
+  v: unknown,
+  visit: (key: string, value: unknown, parentKey: string | undefined) => void,
+  parent?: string,
+): void {
   if (Array.isArray(v)) {
     for (const x of v) walk(x, visit, parent);
     return;
@@ -176,25 +193,29 @@ export interface GuardHit {
   readonly offending: string[];
 }
 
-/** §8.4 number guard. Returns offending raw numbers (empty = pass). */
+/** §8.4 number guard. Returns offending numbers in 2-decimal form, Chinese numerals verbatim (empty = pass). */
 export function numberGuard(text: string, sets: AllowSets): string[] {
   const t = preprocess(text);
   const bad: string[] = [];
-  for (const n of extractNumbers(t)) {
+  const nums = extractNumbers(t);
+  // Arabic numbers (with their 万/k suffix) are blanked before the Chinese-numeral scan, so "1.8万" counts once
+  let rest = t;
+  for (const n of nums) rest = rest.slice(0, n.start) + ' '.repeat(n.end - n.start) + rest.slice(n.end);
+  for (const n of nums) {
     const ctx = classify(t, n);
     const inPrice = sets.price.has(n.value);
     const inDist = sets.dist.has(n.value);
     let ok: boolean;
     if (ctx === 'price') ok = inPrice;
     else if (ctx === 'distance') ok = inDist;
-    else if (ctx === 'both') ok = inPrice && inDist;
+    else if (ctx === 'both') ok = inPrice || inDist;
     else ok = !(n.hasDecimal || n.numeric >= 100) || sets.sys.has(n.value);
-    if (!ok) bad.push(n.raw.trim());
+    if (!ok) bad.push(n.value);
   }
   // Chinese numerals within 4 chars of a price/distance word: cannot be verified -> always a violation.
-  for (const m of t.matchAll(CN_NUM)) {
+  for (const m of rest.matchAll(CN_NUM)) {
     const lo = Math.max(0, m.index - 4);
-    const around = t.slice(lo, m.index + m[0].length + 4).toLowerCase();
+    const around = rest.slice(lo, m.index + m[0].length + 4).toLowerCase();
     if ([...PRICE_WORDS, ...DIST_WORDS].some((w) => around.includes(w.toLowerCase()))) bad.push(m[0]);
   }
   return bad;

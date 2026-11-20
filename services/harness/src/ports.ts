@@ -12,7 +12,8 @@ export type EmitResult =
   /** 409 FENCE_STALE */
   | { readonly status: 'stale' };
 
-export type HandsTokenResult = { readonly status: 'ok'; readonly token: string } | { readonly status: 'stale' | 'inactive' };
+export type HandsTokenResult =
+  { readonly status: 'ok'; readonly token: string } | { readonly status: 'stale' | 'inactive' };
 
 export interface SessionApi {
   getSession(sessionId: string): Promise<GetSessionResponse>;

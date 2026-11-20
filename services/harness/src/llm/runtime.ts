@@ -19,7 +19,9 @@ export interface LlmOptions {
 export interface Llm {
   readonly model: Model<'openai-completions'>;
   readonly apiKey: () => string | undefined;
-  readonly streamFn: (...args: Parameters<ReturnType<typeof createModels>['streamSimple']>) => ReturnType<ReturnType<typeof createModels>['streamSimple']>;
+  readonly streamFn: (
+    ...args: Parameters<ReturnType<typeof createModels>['streamSimple']>
+  ) => ReturnType<ReturnType<typeof createModels>['streamSimple']>;
 }
 
 export function createLlm(opts: LlmOptions): Llm {
@@ -84,24 +86,26 @@ export interface RunResult {
   readonly lastStopReason: AssistantMessage['stopReason'] | undefined;
 }
 
-function toAgentTools(defs: readonly ToolDefinition[], run: RunOptions, rawById: Map<string, Record<string, unknown>>): AgentTool[] {
-  return defs.map(
-    (d): AgentTool => ({
-      name: d.name,
-      label: d.name,
-      description: d.description,
-      // TypeBox output is plain JSON Schema; DeepSeek receives it byte-identical (S-01 Q9)
-      parameters: d.parameters as unknown as AgentTool['parameters'],
-      executionMode: d.executionMode,
-      execute: async (toolCallId, params, signal) => {
-        const out = await run.executeTool(
-          { id: toolCallId, name: d.name, rawArgs: rawById.get(toolCallId) ?? {}, args: params },
-          signal,
-        );
-        return { content: [{ type: 'text', text: out.text }], details: out.details };
-      },
-    }),
-  );
+function toAgentTools(
+  defs: readonly ToolDefinition[],
+  run: RunOptions,
+  rawById: Map<string, Record<string, unknown>>,
+): AgentTool[] {
+  return defs.map((d): AgentTool => ({
+    name: d.name,
+    label: d.name,
+    description: d.description,
+    // TypeBox output is plain JSON Schema; DeepSeek receives it byte-identical (S-01 Q9)
+    parameters: d.parameters as unknown as AgentTool['parameters'],
+    executionMode: d.executionMode,
+    execute: async (toolCallId, params, signal) => {
+      const out = await run.executeTool(
+        { id: toolCallId, name: d.name, rawArgs: rawById.get(toolCallId) ?? {}, args: params },
+        signal,
+      );
+      return { content: [{ type: 'text', text: out.text }], details: out.details };
+    },
+  }));
 }
 
 export async function runAgent(run: RunOptions): Promise<RunResult> {
@@ -134,11 +138,14 @@ export async function runAgent(run: RunOptions): Promise<RunResult> {
     beforeToolCall: async ({ toolCall, assistantMessage }) => {
       // CT-08: check the RAW arguments first (pi silently coerces 2.5→2, 1→"1", ... S-01 Q9)
       const def = defs.get(toolCall.name);
-      const errors = def === undefined ? [`unknown tool ${toolCall.name}`] : rawArgsErrors(def.parameters, toolCall.arguments);
+      const errors =
+        def === undefined ? [`unknown tool ${toolCall.name}`] : rawArgsErrors(def.parameters, toolCall.arguments);
       if (errors.length > 0) {
         return { block: true, reason: `${LLM_PREFIX_BLOCKED}INVALID_INPUT: ${errors.slice(0, 3).join('; ')}` };
       }
-      const index = assistantMessage.content.filter((c) => c.type === 'toolCall').findIndex((c) => c.id === toolCall.id);
+      const index = assistantMessage.content
+        .filter((c) => c.type === 'toolCall')
+        .findIndex((c) => c.id === toolCall.id);
       const blocked = run.admitTool(toolCall, index);
       if (blocked !== undefined) return { block: true, reason: blocked };
       rawById.set(toolCall.id, toolCall.arguments);

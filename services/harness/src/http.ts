@@ -67,6 +67,9 @@ export class HttpSessionApi implements SessionApi {
   }
 }
 
+/** CONTRACT M-23 ③: one execute attempt times out after 10s. */
+export const HANDS_TIMEOUT_MS = 10_000;
+
 export class HttpHands implements Hands {
   private readonly http: HttpClient;
   constructor(http: HttpClient) {
@@ -79,7 +82,7 @@ export class HttpHands implements Hands {
       const r = await this.http.post('/internal/execute', req, {
         headers: { authorization: `Bearer ${token}` },
         retries: 0,
-        timeoutMs: 15_000,
+        timeoutMs: HANDS_TIMEOUT_MS,
       });
       if (r.status === 200) return { status: 'ok', response: r.json<ExecuteResponse>() };
       if (r.status === 401) return { status: 'auth' };

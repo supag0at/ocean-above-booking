@@ -35,11 +35,11 @@ import {
   type ExecuteRequest,
   type ExecuteResponse,
 } from '@fb/contracts/tools';
-import { compact } from './compactor.ts';
+import { compact, type CompactOptions } from './compactor.ts';
 import { findRunStarted, isType, lastSeq, mergeEvents, ofType, runIdOf, type Ev, type EvOf } from './events.ts';
 import { allowSets, checkFinalReply, hasBookingConfirmed, tagGuard, type GuardHit } from './guards.ts';
 import { chooseLang } from './lang.ts';
-import { LeaseKeeper, type Lease, type LeaseStore } from './lease.ts';
+import { LeaseKeeper, type LeaseStore } from './lease.ts';
 import {
   runAgent,
   templateAssistantMessage,
@@ -50,7 +50,14 @@ import {
   type ToolOutcome,
 } from './llm/runtime.ts';
 import { rawArgsErrors } from './llm/strict-check.ts';
-import { PI_VERSION, type AgentMessage, type AssistantMessage, type ToolCall, type ToolResultMessage, type Usage } from './llm/types.ts';
+import {
+  PI_VERSION,
+  type AgentMessage,
+  type AssistantMessage,
+  type ToolCall,
+  type ToolResultMessage,
+  type Usage,
+} from './llm/types.ts';
 import type { EmitResult, EphemeralPublisher, Hands, SessionApi } from './ports.ts';
 import { readAll } from './ports.ts';
 import {
@@ -90,6 +97,8 @@ export interface HarnessDeps {
   readonly now?: () => Date;
   readonly sleep?: (ms: number) => Promise<void>;
   readonly log?: (msg: string, fields?: Record<string, unknown>) => void;
+  /** compactor watermarks override (tests / V18 only; production uses D-57 H=40k, L=16k) */
+  readonly compactOptions?: Pick<CompactOptions, 'high' | 'low'>;
   /** test hook: called with every LLM request payload (golden tests, §6.5 V1) */
   readonly onLlmPayload?: (payload: unknown) => void;
 }
@@ -121,7 +130,7 @@ export type JobOutcome = 'not_acquired' | 'idle' | 'lease_lost' | 'inactive';
 export async function onJob(deps: HarnessDeps, sessionId: string, traceId = 'harness'): Promise<JobOutcome> {
   let lease = await deps.leases.acquire(sessionId);
   if (lease === null) return 'not_acquired';
-  let events: Ev[] = [];
+  let events: Ev[];
   for (;;) {
     const keeper = new LeaseKeeper(deps.leases, lease, deps.renewMs);
     keeper.start();
@@ -317,7 +326,7 @@ class RunContext {
       });
       const nowIso = this.now().toISOString();
       // compactor: before run_started, never during a run (D-52, §4.5)
-      const cmp = compact(this.events, inputSeqs, { nowIso });
+      const cmp = compact(this.events, inputSeqs, { ...this.deps.compactOptions, nowIso });
       if (cmp !== null) {
         await this.emit(
           { type: 'agent.context_compacted', payload: cmp, idempotencyKey: compactIdempotencyKey(cmp.compactionId) },
@@ -355,8 +364,7 @@ class RunContext {
       // step 0: ending reconciliation (no model call, no run_resumed)
       if (await this.reconcileEnding()) return 'done';
 
-      const prior =
-        1 + ofType(this.events, 'agent.run_resumed').filter((e) => e.payload.runId === runId).length;
+      const prior = 1 + ofType(this.events, 'agent.run_resumed').filter((e) => e.payload.runId === runId).length;
       this.attempt = prior + 1;
       if (this.attempt > this.limits.restartLimit) {
         this.attempt = prior; // the new attempt is not started; fill + template carry the last attempt number
@@ -617,6 +625,7 @@ class RunContext {
 
   private async writeEnding(ending: Ending): Promise<void> {
     const key = runDoneIdempotencyKey(this.runId);
+    await this.refresh(); // usage is summed from the persisted messages
     try {
       if (ending.kind === 'completed') {
         await this.emit(
@@ -665,7 +674,9 @@ class RunContext {
       requests: usages.length,
       costUsd:
         Math.round(
-          ((inputTokens * COST_PER_M.input + cacheReadTokens * COST_PER_M.cacheRead + outputTokens * COST_PER_M.output) /
+          ((inputTokens * COST_PER_M.input +
+            cacheReadTokens * COST_PER_M.cacheRead +
+            outputTokens * COST_PER_M.output) /
             1e6) *
             1e9,
         ) / 1e9,

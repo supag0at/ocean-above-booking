@@ -44,7 +44,14 @@ export class LeaseStore {
 
   /** Returns the lease, or null when someone else holds it (fence untouched). */
   async acquire(sessionId: string): Promise<Lease | null> {
-    const r = await this.redis.eval(ACQUIRE_LUA, 2, leaseKey(sessionId), fenceKey(sessionId), this.workerId, this.ttlMs);
+    const r = await this.redis.eval(
+      ACQUIRE_LUA,
+      2,
+      leaseKey(sessionId),
+      fenceKey(sessionId),
+      this.workerId,
+      this.ttlMs,
+    );
     // Lua `false` comes back as null
     if (r === null || r === undefined || r === false) return null;
     const fence = Number(r);

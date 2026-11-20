@@ -55,8 +55,10 @@ export function rawArgsErrors(schema: unknown, value: unknown, path = ''): strin
       break;
     case 'array': {
       if (!Array.isArray(value)) return [`${at}: must be an array`];
-      if (typeof s.minItems === 'number' && value.length < s.minItems) errs.push(`${at}: fewer than ${s.minItems} items`);
-      if (typeof s.maxItems === 'number' && value.length > s.maxItems) errs.push(`${at}: more than ${s.maxItems} items`);
+      if (typeof s.minItems === 'number' && value.length < s.minItems)
+        errs.push(`${at}: fewer than ${s.minItems} items`);
+      if (typeof s.maxItems === 'number' && value.length > s.maxItems)
+        errs.push(`${at}: more than ${s.maxItems} items`);
       if (s.items !== undefined) value.forEach((x, i) => errs.push(...rawArgsErrors(s.items, x, `${path}/${i}`)));
       break;
     }
