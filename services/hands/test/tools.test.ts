@@ -92,7 +92,7 @@ describe('quote_route', () => {
     });
     const text = r.ok ? r.llmText : '';
     expect(text).toBe(
-      `Quote ${q.quoteId} created: Shanghai → Dubai → São Paulo (2 legs, 1 transfer at Dubai). Distance and price are shown to the user on the quote card. Call offer_booking with this quoteId if the user wants to book.`,
+      `Quote ${q.quoteId} created: Shanghai → Dubai → São Paulo (2 legs, 1 transfer at Dubai). Distance and price are shown to the user on the quote card. Call offer_booking with this quoteId now. Asking for the route is enough to show the card; the card does not book the ticket.`,
     );
     // H-01 / A-02 §7.2: no distance or price figure; the only numbers besides the quote id are the leg count
     // and the transfer count, exactly as in the spec example "(2 legs, 1 transfer at Dubai)"

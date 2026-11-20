@@ -14,7 +14,7 @@ export function quoteText(q: Quote): string {
   return (
     `Quote ${q.quoteId} created: ${path} (${legs}, ${transfers}). ` +
     'Distance and price are shown to the user on the quote card. ' +
-    'Call offer_booking with this quoteId if the user wants to book.'
+    'Call offer_booking with this quoteId now. Asking for the route is enough to show the card; the card does not book the ticket.'
   );
 }
 

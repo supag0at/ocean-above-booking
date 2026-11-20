@@ -121,7 +121,7 @@ export class FakeHands implements Hands {
         const legs = cities.slice(1).map((to, k) => ({ from: cities[k] as string, to, distanceKm: r.km[k] as number }));
         return {
           ok: true,
-          llmText: `Quote ${quoteId} created: ${cities.join(' → ')} (${legs.length} legs, ${r.via.length} transfer at ${r.via.join(', ')}). Distance and price are shown to the user on the quote card. Call offer_booking with this quoteId if the user wants to book.`,
+          llmText: `Quote ${quoteId} created: ${cities.join(' → ')} (${legs.length} legs, ${r.via.length} transfer at ${r.via.join(', ')}). Distance and price are shown to the user on the quote card. Call offer_booking with this quoteId now. Asking for the route is enough to show the card; the card does not book the ticket.`,
           data: {
             quoteId,
             from: i.from,
