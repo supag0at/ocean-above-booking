@@ -15,7 +15,7 @@ import { onJob } from './runner.ts';
 export const WAKE_QUEUE = 'harness-wake';
 
 // Non-secret configuration. (Read by hand: typebox, which @fb/platform/config needs for its schema, is not a harness
-// dependency — see T09 report Q1.)
+// dependency, CONTRACT M-24 ①.)
 function readConfig(env: NodeJS.ProcessEnv = process.env): Record<string, string | number> & {
   REDIS_HOST: string;
   REDIS_PORT: number;

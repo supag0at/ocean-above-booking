@@ -1,5 +1,4 @@
-// Template messages (A-02 §12.1). The texts are harness-local for W3: the contract package v1.0 only carries
-// TEMPLATE_IDS, not the zh/en copy (reported to the parent session, T09 report "新发现").
+// Template messages (A-02 §12.1). The zh/en copy is harness-local (CONTRACT M-24 ⑦); the contract carries TEMPLATE_IDS.
 import type { Ending, ErrorCode, Locale, TemplateId } from '@fb/contracts/server';
 
 export const TEMPLATE_TEXT: Readonly<Record<TemplateId, Readonly<Record<Locale, string>>>> = {

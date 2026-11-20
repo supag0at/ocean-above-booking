@@ -137,9 +137,9 @@ export async function runAgent(run: RunOptions): Promise<RunResult> {
     },
     beforeToolCall: async ({ toolCall, assistantMessage }) => {
       // CT-08: check the RAW arguments first (pi silently coerces 2.5→2, 1→"1", ... S-01 Q9)
-      const def = defs.get(toolCall.name);
-      const errors =
-        def === undefined ? [`unknown tool ${toolCall.name}`] : rawArgsErrors(def.parameters, toolCall.arguments);
+      const errors = defs.has(toolCall.name)
+        ? rawArgsErrors(toolCall.name, toolCall.arguments)
+        : [`unknown tool ${toolCall.name}`];
       if (errors.length > 0) {
         return { block: true, reason: `${LLM_PREFIX_BLOCKED}INVALID_INPUT: ${errors.slice(0, 3).join('; ')}` };
       }

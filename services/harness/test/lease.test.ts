@@ -3,37 +3,16 @@
 // skipped (with a visible note) when nothing is listening, so `pnpm check` still runs on a machine without docker.
 //   docker run -d --rm --name t09-redis -p 127.0.0.1:6390:6379 redis:7 redis-server --requirepass t09-local-test
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createRedis, type Redis } from '@fb/platform/redis';
+import type { Redis } from '@fb/platform/redis';
 import { fenceKey, LeaseKeeper, leaseKey, LeaseStore, type LeaseRedis } from '../src/lease.ts';
+import { connectRealRedis, REAL_REDIS_URL } from './fakes/real-redis.ts';
 import { FakeRedis } from './fakes/redis.ts';
-
-const url = new URL(process.env.T09_REDIS_URL ?? 'redis://default:t09-local-test@127.0.0.1:6390');
-
-async function connectReal(): Promise<Redis | undefined> {
-  const r = createRedis({
-    host: url.hostname,
-    port: Number(url.port),
-    username: decodeURIComponent(url.username) || 'default',
-    secrets: { get: () => decodeURIComponent(url.password) },
-    lazyConnect: true,
-    maxRetriesPerRequest: 0,
-    connectTimeoutMs: 500,
-  });
-  try {
-    await r.connect();
-    await r.ping();
-    return r;
-  } catch {
-    r.disconnect();
-    return undefined;
-  }
-}
 
 let real: Redis | undefined;
 beforeAll(async () => {
-  real = await connectReal();
+  real = await connectRealRedis();
   if (real === undefined)
-    console.warn(`[lease.test] real Redis at ${url.host} not reachable: real-Redis cases skipped`);
+    console.warn(`[lease.test] real Redis at ${REAL_REDIS_URL.host} not reachable: real-Redis cases skipped`);
 });
 afterAll(() => real?.disconnect());
 

@@ -2,8 +2,8 @@
 // pi pipeline, guards, write-back) against the W3 stand-ins and prints the event log.
 //
 //   node services/harness/scripts/demo.ts           # scripted fake DeepSeek (no network, deterministic)
-//   node services/harness/scripts/demo.ts --live    # real DeepSeek; key read only from <repo-root>/../../.env? no:
-//                                                   # from C:\Users\bb0\Desktop\flight-booking\.env (DEEPSEEK_API_KEY)
+//   node services/harness/scripts/demo.ts --live    # real DeepSeek (~6 requests); DEEPSEEK_API_KEY is read only
+//                                                   # from C:\Users\bb0\Desktop\flight-booking\.env, never printed
 //   add --json to dump the raw events instead of the readable table
 //
 // Conversation: ① 从上海飞圣保罗  ② (user clicks the card → booking.confirmed)  ③ 订好了吗？

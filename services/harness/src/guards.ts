@@ -221,7 +221,7 @@ export function numberGuard(text: string, sets: AllowSets): string[] {
   return bad;
 }
 
-// §8.5 (harness-local table: the contract package does not carry it yet, see T09 report)
+// §8.5 (harness-local, CONTRACT M-24 ⑦)
 export const BOOKING_CLAIM_RE =
   /已(?:为您|帮您|给您)?(?:预订|订好|订票成功|出票|完成预订|搞定)|座位已(?:经)?(?:为您)?(?:留好|锁定)|booked (?:it|your|the)|booking (?:is |has been )?confirmed|ticket (?:has been |is )?issued|you'?re all set/gi;
 

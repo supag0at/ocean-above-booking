@@ -56,11 +56,12 @@ export class FakeSessionApi {
   inject?: (req: EmitReq, fence: number) => number | undefined;
   app!: FastifyInstance;
   baseUrl = '';
-  private readonly redis: FakeRedis;
+  private readonly readFence: (sid: string) => Promise<number>;
   private clock = Date.parse('2026-11-19T08:00:00.000Z');
 
-  constructor(redis: FakeRedis) {
-    this.redis = redis;
+  /** `redis` is the in-memory stand-in, or any async fence reader (e.g. a real redis:7). */
+  constructor(redis: FakeRedis | ((sid: string) => Promise<number>)) {
+    this.readFence = typeof redis === 'function' ? redis : async (sid) => Number(redis.get(fenceKey(sid)) ?? '0');
   }
 
   /** Deterministic timestamps: +1s per event. */
@@ -101,7 +102,7 @@ export class FakeSessionApi {
           { schema: { body: EmitEventRequest } },
           async (req, reply) => {
             const fence = Number(req.headers['x-lease-fence']);
-            const r = this.emit(req.params.id, fence, req.body);
+            const r = await this.emit(req.params.id, fence, req.body);
             this.emitLog.push({
               sid: req.params.id,
               fence,
@@ -118,7 +119,7 @@ export class FakeSessionApi {
           const sid = req.params.id;
           const s = this.sessions.get(sid);
           if (!s) return reply.code(404).send(errorEnvelope('SESSION_NOT_FOUND', 'no session', req.trace.traceId));
-          if (!this.fenceOk(sid, Number(req.headers['x-lease-fence']))) {
+          if (!(await this.fenceOk(sid, Number(req.headers['x-lease-fence'])))) {
             return reply.code(409).send(errorEnvelope('FENCE_STALE', 'stale', req.trace.traceId));
           }
           if (computeWork(s.events).kind === 'none' && findOpenRun(s.events) === undefined) {
@@ -177,14 +178,20 @@ export class FakeSessionApi {
     return this.append(sid, 'booking.confirmed', p, `booking:${p.quoteId}`).seq;
   }
 
-  private fenceOk(sid: string, f: number): boolean {
-    const cur = Number(this.redis.get(fenceKey(sid)) ?? '0');
+  private async fenceOk(sid: string, f: number): Promise<boolean> {
+    const cur = await this.readFence(sid);
     return Number.isInteger(f) && f >= cur;
   }
 
-  private emit(sid: string, fence: number, req: EmitReq): { status: number; code?: string; body?: unknown } {
+  private async emit(
+    sid: string,
+    fence: number,
+    req: EmitReq,
+  ): Promise<{ status: number; code?: string; body?: unknown }> {
     const s = this.sessions.get(sid);
     if (!s) return { status: 404, code: 'SESSION_NOT_FOUND' };
+    // the only await: everything below runs without yielding, like the real handler's single transaction
+    const fenceGood = await this.fenceOk(sid, fence);
     const injected = this.inject?.(req, fence);
     if (injected !== undefined) return { status: injected, code: injected === 409 ? 'FENCE_STALE' : 'INTERNAL' };
     if (req.type === 'agent.run_started') {
@@ -199,7 +206,7 @@ export class FakeSessionApi {
         return { status: 400, code: 'EVENT_INVALID' };
       }
     }
-    if (!this.fenceOk(sid, fence)) return { status: 409, code: 'FENCE_STALE' };
+    if (!fenceGood) return { status: 409, code: 'FENCE_STALE' };
     const prev = s.idem.get(req.idempotencyKey);
     if (prev !== undefined) {
       if (prev.canon === canonicalJson({ type: req.type, payload: req.payload })) {

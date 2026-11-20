@@ -575,8 +575,9 @@ export function buildLog(prog: Program, opts: BuilderOpts = {}): Ev[] {
         else b.bookingFailed();
         break;
       case 'compact': {
-        // boundary must be a finished run at or after the previous boundary
-        const cands = finished.filter((_, i) => i >= Math.max(0, lastBoundary));
+        // boundary must be a finished run strictly after the previous boundary: the compactor never repeats one
+        // (compactor.ts), and a repeat would reuse its idempotency key, which the session API dedupes
+        const cands = finished.filter((_, i) => i > lastBoundary);
         if (open === undefined && cands.length > 0) {
           const idx = finished.indexOf(cands[s.pick % cands.length] as string);
           lastBoundary = idx;
@@ -612,6 +613,12 @@ export function buildLog(prog: Program, opts: BuilderOpts = {}): Ev[] {
         break;
       }
     }
+  }
+  // A-01 §3.2 UNIQUE (session_id, idempotency_key): a generated log must never hold the same key twice
+  const keys = new Set<string>();
+  for (const e of b.events) {
+    if (keys.has(e.idempotencyKey)) throw new Error(`buildLog: duplicate idempotencyKey ${e.idempotencyKey}`);
+    keys.add(e.idempotencyKey);
   }
   return b.events;
 }

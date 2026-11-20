@@ -560,9 +560,7 @@ class RunContext {
   }
 
   private admissible(call: ToolCall, ordinal: number): boolean {
-    const def = ALL_TOOLS.find((t) => t.name === call.name);
-    if (def === undefined) return false;
-    if (rawArgsErrors(def.parameters, call.arguments).length > 0) return false;
+    if (rawArgsErrors(call.name, call.arguments).length > 0) return false;
     return ordinal < this.limits.maxToolCalls;
   }
 
