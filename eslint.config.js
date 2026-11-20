@@ -9,7 +9,16 @@ const forbiddenMessage = 'A-01 §1.2: child_process / vm are forbidden in apps, 
 
 export default tseslint.config(
   {
-    ignores: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/out/**', '**/coverage/**', 'spikes/**', 'docs/**'],
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/out/**',
+      '**/coverage/**',
+      'spikes/**',
+      'docs/**',
+      '.claude/**',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

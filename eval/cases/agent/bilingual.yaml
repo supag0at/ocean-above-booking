@@ -1,0 +1,96 @@
+# category: bilingual — 中英双语（A-02 §10，D-43）
+# 两层断言：
+#   run_lang：agent.run_started.payload.lang，按 §10 的确定性规则，期望值和 deterministic/escape_lang.yaml 一致；
+#   final_reply.lang：落库最终回复 viewText 的语言（判定口径见 README §4.3）。
+category: bilingual
+threshold: 0.95
+cases:
+  - id: bilingual-001
+    lang: zh
+    setup: {session_locale: en}
+    turns:
+      - user: 从上海飞圣保罗
+    expect:
+      - run_lang: {turn: 1, eq: zh}
+      - final_reply: {lang: zh}
+
+  - id: bilingual-002
+    lang: en
+    setup: {session_locale: zh}
+    turns:
+      - user: Book me a flight from Shanghai to São Paulo
+    expect:
+      - run_lang: {turn: 1, eq: en}
+      - final_reply: {lang: en}
+
+  - id: bilingual-003
+    lang: mixed
+    note: CJK 比例 0.235，规则 1 判断不出 → 无画像 → 第一次运行 → 用会话 locale（en）
+    setup: {session_locale: en}
+    turns:
+      - user: 帮我查 Shanghai 到 Tokyo
+    expect:
+      - run_lang: {turn: 1, eq: en}
+      - final_reply: {lang: en}
+      - quote_matches_oracle: {from: Shanghai, to: Tokyo}
+
+  - id: bilingual-004
+    lang: mixed
+    note: 同一句话，locale 是 zh → zh
+    setup: {session_locale: zh}
+    turns:
+      - user: 帮我查 Shanghai 到 Tokyo
+    expect:
+      - run_lang: {turn: 1, eq: zh}
+      - final_reply: {lang: zh}
+
+  - id: bilingual-005
+    lang: mixed
+    note: 中途切换语言：第 1 轮中文，第 2 轮英文
+    setup: {session_locale: zh}
+    turns:
+      - user: 上海到东京
+      - user: Actually, make it Beijing to Tokyo instead.
+    expect:
+      - run_lang: {turn: 1, eq: zh}
+      - run_lang: {turn: 2, eq: en}
+      - turn: 1
+        final_reply: {lang: zh}
+      - turn: 2
+        final_reply: {lang: en}
+      - turn: 2
+        tool_called: {name: quote_route, args: {from: Beijing, to: Tokyo}, ok: true}
+
+  - id: bilingual-006
+    lang: mixed
+    note: 英文句子夹中文城市名，CJK 比例 4/13 = 0.308 ≥ 0.3 → 规则判成 zh（规范的字面结果，见 README 含糊点）
+    setup: {session_locale: en}
+    turns:
+      - user: Fly from 上海 to 东京
+    expect:
+      - run_lang: {turn: 1, eq: zh}
+      - tool_called: {name: quote_route, args: {from: Shanghai, to: Tokyo}, ok: true}
+
+  - id: bilingual-007
+    lang: mixed
+    note: 判断不出时用画像里的 preferredLanguage（优先于 locale）
+    setup:
+      session_locale: zh
+      memories:
+        - {key: preferred_language, value: en}
+    turns:
+      - user: 帮我查 Shanghai 到 Tokyo
+    expect:
+      - run_lang: {turn: 1, eq: en}
+      - final_reply: {lang: en}
+
+  - id: bilingual-008
+    lang: mixed
+    note: 判断不出、没有画像、不是第一次运行 → 用上一次运行的 lang
+    setup: {session_locale: zh}
+    turns:
+      - user: Shanghai to Tokyo
+      - user: "12345"
+    expect:
+      - run_lang: {turn: 1, eq: en}
+      - run_lang: {turn: 2, eq: en}

@@ -173,3 +173,5 @@
   另有两个子 agent：T04 oracle（Sonnet，和 flight-core 代码隔离）、T13a 评测用例（Opus medium）。各任务的规划和 manifest 在 a3d9c77 里。
 - 2026-11-19：T04 oracle 已提交（bed5123、6cc9161）：490,700 个城市对，10 个无服务城市的推荐和 R-01 一致。契约升到 v1.0.1，新增 M-22，只是澄清打平规则和舍入口径。
   - **异常**：W3 的 7 个会话**全部没有启动**。app 报"setup did not finish"，worktree 也没有创建，所以给 T03、T08 的 M-22 广播没有送达。这些会话还在，按 app 的提示不能由父会话自动重启，需要人来决定怎么处理。
+- 2026-11-19：W3 会话启动失败的原因已查明。新会话需要用户确认"信任该 repo"，用户已经逐个手动确认。现在 7 个会话都在运行，worktree 在 `.claude/worktrees/*`（已写进 `.git/info/exclude`），分支都已改名为 `task/<ID>`，基线都是 9eb0582，已经包含契约 v1.0.1。M-22 已重新广播给 T03 和 T08。
+  - 和 D-15 不同的地方：worktree 的路径是 app 指定的 `.claude/worktrees/`，不在 `..\flight-booking-wt\`。分支命名和 manifest 机制都不受影响。

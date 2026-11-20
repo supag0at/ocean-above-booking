@@ -1,0 +1,126 @@
+# category: route — 主流程：直飞 / 换乘 / 多次换乘 / 两端都是枢纽 / 反向 / 同城 / 不存在的城市
+# 期望的航线以 eval/cases/deterministic/route.yaml 为准（T13a 计算，待和 oracle 核对）；
+# 这里只写 quote_matches_oracle，由运行器拿 oracle 的结果比对 quote_route 的 data。
+category: route
+threshold: 0.95
+cases:
+  - id: route-001
+    lang: zh
+    note: 两端都是枢纽但没有 hub_link，在 Hong Kong 换乘 1 次（det-route-007）
+    setup: {}
+    turns:
+      - user: 从上海飞圣保罗
+    expect:
+      - tool_called: {name: resolve_city, min: 2}
+      - tool_called: {name: quote_route, args: {from: Shanghai, to: São Paulo}, ok: true}
+      - quote_matches_oracle: {from: Shanghai, to: São Paulo}
+      - tool_order: [resolve_city, quote_route, offer_booking]
+      - event_present: {type: quote.offered, min: 1}
+      - event_absent: {type: booking.confirmed}
+      - no_guard_violation: {}
+      - final_reply: {lang: zh, numbers_subset_of_tool_results: true}
+
+  - id: route-002
+    lang: en
+    note: 非枢纽到它连接的枢纽，直飞 1 段（det-route-001）
+    setup: {}
+    turns:
+      - user: I need a flight from Chengdu to Shanghai.
+    expect:
+      - tool_called: {name: quote_route, args: {from: Chengdu, to: Shanghai}, ok: true}
+      - quote_matches_oracle: {from: Chengdu, to: Shanghai}
+      - quote_data: {from: Chengdu, to: Shanghai, legs_count: 1, transferCities: []}
+      - event_absent: {type: booking.confirmed}
+      - final_reply: {lang: en, numbers_subset_of_tool_results: true}
+
+  - id: route-003
+    lang: zh
+    note: 中文名 + 需要转写的 ø；Beijing → Johannesburg → Tromsø（det-route-011）
+    setup: {}
+    turns:
+      - user: 北京到特罗姆瑟的机票
+    expect:
+      - tool_called: {name: quote_route, args: {from: Beijing, to: Tromsø}, ok: true}
+      - quote_matches_oracle: {from: Beijing, to: Tromsø}
+      - final_reply: {lang: zh, numbers_subset_of_tool_results: true}
+
+  - id: route-004
+    lang: en
+    note: 枢纽之间最长的路线，6 段 5 次换乘（det-route-015）
+    setup: {}
+    turns:
+      - user: Bangkok to Madrid please, cheapest option.
+    expect:
+      - tool_called: {name: quote_route, args: {from: Bangkok, to: Madrid}, ok: true}
+      - quote_matches_oracle: {from: Bangkok, to: Madrid}
+      - quote_data: {from: Bangkok, to: Madrid, legs_count: 6}
+      - final_reply: {lang: en, numbers_subset_of_tool_results: true}
+
+  - id: route-005
+    lang: zh
+    note: route-001 的反向，路线必须是 São Paulo → Hong Kong → Shanghai（det-route-008）
+    setup: {}
+    turns:
+      - user: 我要从圣保罗回上海
+    expect:
+      - tool_called: {name: quote_route, args: {from: São Paulo, to: Shanghai}, ok: true}
+      - quote_matches_oracle: {from: São Paulo, to: Shanghai}
+      - final_reply: {lang: zh}
+
+  - id: route-006
+    lang: zh
+    note: 同城（错误情况）。允许 LLM 不调用 quote_route 直接说明；如果调用了，必须是 SAME_CITY
+    setup: {}
+    turns:
+      - user: 帮我订一张从上海到上海的票
+    expect:
+      - tool_called: {name: quote_route, ok: true, max: 0}
+      - event_absent: {type: quote.offered}
+      - tool_result: {name: quote_route, all: {ok: false, error_code: SAME_CITY}}
+      - final_reply: {lang: zh, not_contains_regex: ["报价已生成"]}
+
+  - id: route-007
+    lang: en
+    note: 不存在的城市。resolve_city 对 Atlantis 返回 suggest Atlanta(0.75)，只有 1 个但 < 0.9，必须先问用户（D-61），不能自动改成 Atlanta
+    setup: {}
+    turns:
+      - user: Fly me from Shanghai to Atlantis.
+    expect:
+      - tool_called: {name: resolve_city, min: 1}
+      - tool_called: {name: quote_route, ok: true, max: 0}
+      - event_absent: {type: quote.offered}
+      - final_reply: {lang: en, contains_any: ["Atlantis"]}
+
+  - id: route-008
+    lang: zh
+    note: 最便宜 ≠ 段数最少。Dubai→Mecca 存在 2 段的路线，但最便宜的是 6 段（det-route-017）
+    setup: {}
+    turns:
+      - user: 迪拜飞麦加，要最便宜的
+    expect:
+      - tool_called: {name: quote_route, args: {from: Dubai, to: Mecca}, ok: true}
+      - quote_matches_oracle: {from: Dubai, to: Mecca}
+      - quote_data: {from: Dubai, to: Mecca, legs_count: 6}
+      - final_reply: {lang: zh, not_contains: ["直飞"], numbers_subset_of_tool_results: true}
+
+  - id: route-009
+    lang: en
+    note: 真实世界里是直飞，数据里必须经 Lagos 换乘（det-route-010）。LLM 不能凭常识说 direct
+    setup: {}
+    turns:
+      - user: New York to London, is there a direct flight?
+    expect:
+      - tool_called: {name: quote_route, args: {from: New York, to: London}, ok: true}
+      - quote_matches_oracle: {from: New York, to: London}
+      - final_reply: {lang: en, contains_any: ["Lagos"], not_contains_regex: ["(?i)\\b(yes|there is)\\b[^.]{0,20}\\bdirect"]}
+
+  - id: route-010
+    lang: zh
+    note: 两个非枢纽城市，真实地理上很近，但数据里要 4 段（det-route-019）
+    setup: {}
+    turns:
+      - user: 广州到深圳
+    expect:
+      - tool_called: {name: quote_route, args: {from: Guangzhou, to: Shenzhen}, ok: true}
+      - quote_matches_oracle: {from: Guangzhou, to: Shenzhen}
+      - final_reply: {lang: zh, numbers_subset_of_tool_results: true}
