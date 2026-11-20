@@ -1,5 +1,6 @@
 // @fb/flight-core: pure domain logic behind the FlightCore contract (@fb/contracts/flight, A-02 §7.6).
 // Construction loads and verifies locations.db; every method afterwards is pure and synchronous.
+import { readFileSync } from 'node:fs';
 import {
   PRICE_CENTS_PER_KM,
   type City,
@@ -20,10 +21,8 @@ export { FlightDataError } from './data.ts';
 export { normalize, compareCodePoint } from './normalize.ts';
 
 export interface FlightCoreOptions {
-  /** Path of locations.db; opened read-only. */
+  /** Path of locations.db. Its bytes are read once to verify sha256 (M-24), then the same path is opened read-only. */
   readonly dbPath: string;
-  /** Raw bytes of the same file; their sha256 must equal LOCATIONS_DB_SHA256 or construction throws. */
-  readonly dbBytes: Uint8Array;
 }
 
 /** `priceCents = Math.round(totalKm × 13)` (A-02 §7.6, M-22 ②; half-up for positive values). */
@@ -37,7 +36,7 @@ export function displayKm(km: number): string {
 }
 
 export function createFlightCore(options: FlightCoreOptions): FlightCore {
-  return new FlightCoreImpl(loadNetwork(options.dbPath, options.dbBytes));
+  return new FlightCoreImpl(loadNetwork(options.dbPath, readFileSync(options.dbPath)));
 }
 
 class FlightCoreImpl implements FlightCore {

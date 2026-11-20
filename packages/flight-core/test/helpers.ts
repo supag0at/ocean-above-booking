@@ -7,7 +7,7 @@ import { createFlightCore } from '../src/index.ts';
 export const DB_PATH = `${import.meta.dirname}/../../../locations.db`;
 export const DB_BYTES = readFileSync(DB_PATH);
 
-export const core = createFlightCore({ dbPath: DB_PATH, dbBytes: DB_BYTES });
+export const core = createFlightCore({ dbPath: DB_PATH });
 
 export interface RawCity {
   name: string;

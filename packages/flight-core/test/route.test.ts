@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { LOCATIONS_DB_SHA256, PRICE_CENTS_PER_KM, type City, type Route } from '@fb/contracts/flight';
 import { createFlightCore, FlightDataError } from '../src/index.ts';
-import type { Network } from '../src/data.ts';
+import { loadNetwork, type Network } from '../src/data.ts';
 import { better, cheapestPath } from '../src/route.ts';
 import { ALL_NAMES, DB_BYTES, DB_PATH, RAW, SERVED, core, dist, isDirect, prng } from './helpers.ts';
 
@@ -21,7 +21,11 @@ describe('loading (A-02 §7.6, CT-10)', () => {
   it('refuses to start when the bytes do not hash to LOCATIONS_DB_SHA256', () => {
     const tampered = Uint8Array.from(DB_BYTES);
     tampered[tampered.length - 1] = tampered[tampered.length - 1]! ^ 0xff;
-    expect(() => createFlightCore({ dbPath: DB_PATH, dbBytes: tampered })).toThrow(FlightDataError);
+    expect(() => loadNetwork(DB_PATH, tampered)).toThrow(FlightDataError);
+    expect(() => loadNetwork(DB_PATH, tampered)).toThrow(/sha256 mismatch/u);
+    // factory hashes the file at dbPath itself (M-24): any other file is refused before it is opened
+    const other = `${import.meta.dirname}/../package.json`;
+    expect(() => createFlightCore({ dbPath: other })).toThrow(FlightDataError);
   });
   it('opens the database read-only and leaves the file unchanged', () => {
     const src = readFileSync(new URL('../src/data.ts', import.meta.url), 'utf8');

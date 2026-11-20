@@ -39,9 +39,20 @@ export function fuzzyScore(q: string, c: string): number {
   return 0;
 }
 
-export function toMatch(net: Network, i: number, nearest: (i: number) => NearestServed | null): CityMatch {
+/** M-24 `score`: fuzzy score rounded to 4 decimals (same form as the T13a eval cases); ranking uses the raw score. */
+export function roundScore(score: number): number {
+  return Math.round(score * 1e4) / 1e4;
+}
+
+export function toMatch(
+  net: Network,
+  i: number,
+  nearest: (i: number) => NearestServed | null,
+  score?: number,
+): CityMatch {
   const c = net.nodes[i]!.city;
   return {
+    ...(score === undefined ? {} : { score: roundScore(score) }),
     city: c.name,
     isHub: c.isHub,
     served: c.served,
@@ -98,7 +109,7 @@ export function resolveCity(
   if (top.length === 0) return { status: 'not_found', matches: [] };
   return {
     status: 'suggest',
-    matches: top.map(([i]) => toMatch(net, i, nearest)),
+    matches: top.map(([i, m]) => toMatch(net, i, nearest, m.score)),
     matchedBy: { source: 'fuzzy', index: top[0]![1].cand },
   };
 }
