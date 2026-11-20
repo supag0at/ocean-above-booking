@@ -48,11 +48,9 @@ export function canonicalCity(fc: FlightCore, value: string): CityOutcome {
   const tail = c.length > 0 ? ` Candidates: ${c.join(', ')}.` : '';
   return {
     ok: false,
-    response: fail(
-      'INVALID_INPUT',
-      `'${value}' is not an exact city name.${tail} Resolve it first or ask the user.`,
-      { candidates: c },
-    ),
+    response: fail('INVALID_INPUT', `'${value}' is not an exact city name.${tail} Resolve it first or ask the user.`, {
+      candidates: c,
+    }),
   };
 }
 

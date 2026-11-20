@@ -62,6 +62,10 @@ export async function dockerAvailable(): Promise<boolean> {
 export interface TestDb {
   readonly hands: Pool;
   readonly owner: Pool;
+  /** host port mapped to 5432 on 127.0.0.1 */
+  readonly port: number;
+  /** directory holding pg_<role>_password files (as /run/secrets would) */
+  readonly secretsDir: string;
   stop(): Promise<void>;
 }
 
@@ -79,7 +83,7 @@ export async function startTestDb(): Promise<TestDb> {
   const secretsDir = mkdtempSync(join(tmpdir(), 'fb-hands-pg-'));
   for (const [role, v] of Object.entries(pw)) writeFileSync(join(secretsDir, `pg_${role}_password`), `${v}\n`);
 
-  const name = `fb-hands-test-${randomBytes(4).toString('hex')}`;
+  const name = `t08-hands-pg-${randomBytes(4).toString('hex')}`;
   const created = await docker('POST', `/containers/create?name=${name}`, {
     Image: IMAGE,
     Env: ['POSTGRES_DB=app', 'POSTGRES_PASSWORD_FILE=/run/secrets/pg_superuser_password', 'INFRA_DB_DIR=/infra-db'],
@@ -134,7 +138,7 @@ export async function startTestDb(): Promise<TestDb> {
         await probe.end().catch(() => undefined);
         if (Date.now() > deadline) {
           const logs = await docker('GET', `/containers/${id}/logs?stdout=true&stderr=true`);
-          throw new Error(`postgres not ready: ${String(err)}\n${String(logs.json).slice(-2000)}`);
+          throw new Error(`postgres not ready: ${String(err)}\n${String(logs.json).slice(-2000)}`, { cause: err });
         }
         await sleep(500);
       }
@@ -144,6 +148,8 @@ export async function startTestDb(): Promise<TestDb> {
     return {
       hands,
       owner,
+      port,
+      secretsDir,
       async stop() {
         await Promise.allSettled([hands.end(), owner.end()]);
         await remove();

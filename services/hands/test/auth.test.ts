@@ -1,6 +1,6 @@
 // Acceptance 2 (T08): identity comes only from the hands token (A-01 §5.3, H-04). Invalid tokens -> 401 HANDS_AUTH;
 // user A's token never reaches user B's tickets, quotes or memories.
-import { generateKeyPairSync, randomUUID } from 'node:crypto';
+import { generateKeyPairSync, randomUUID, sign } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { signHandsToken } from '@fb/contracts/server';
 import type { ExecuteResponse } from '@fb/contracts/tools';
@@ -28,7 +28,36 @@ describe('token validation', () => {
     const a = await h.newSession();
     const b = await h.newSession();
     const foreign = generateKeyPairSync('ed25519').privateKey;
+    // a holder of A's token rewrites the claims to B's session/user and keeps A's signature
+    const [header, , sig] = a.token.split('.');
+    const claimsB = Buffer.from(
+      JSON.stringify({
+        iss: 'gateway',
+        aud: 'hands',
+        sid: b.sid,
+        uid: b.uid,
+        iat: NOW_SEC,
+        exp: NOW_SEC + 300,
+        jti: 'x',
+      }),
+    ).toString('base64url');
+    // correctly signed by the trusted key, but for another audience
+    const otherAud = Buffer.from(
+      JSON.stringify({
+        iss: 'gateway',
+        aud: 'booking',
+        sid: a.sid,
+        uid: a.uid,
+        iat: NOW_SEC,
+        exp: NOW_SEC + 300,
+        jti: 'y',
+      }),
+    ).toString('base64url');
+    const wrongAud = `${header}.${otherAud}.${sign(null, Buffer.from(`${header}.${otherAud}`), h.privateKey).toString('base64url')}`;
     const bad: Record<string, string | undefined> = {
+      tamperedClaims: `${header}.${claimsB}.${sig}`,
+      wrongAudience: wrongAud,
+      notBearer: undefined,
       missing: undefined,
       garbage: 'not.a.token',
       foreignKey: signHandsToken({ sid: a.sid, uid: a.uid, nowSec: NOW_SEC }, foreign),
@@ -38,7 +67,17 @@ describe('token validation', () => {
       nonUuidSid: h.token('not-a-uuid', a.uid),
     };
     for (const [label, tok] of Object.entries(bad)) {
-      const r = await h.post(tok, body());
+      const r =
+        label === 'notBearer'
+          ? await h.app
+              .inject({
+                method: 'POST',
+                url: '/internal/execute',
+                headers: { authorization: `Basic ${a.token}` },
+                payload: body(),
+              })
+              .then((res) => ({ status: res.statusCode, json: res.json() as unknown }))
+          : await h.post(tok, body());
       expect({ label, status: r.status }).toEqual({ label, status: 401 });
       expect((r.json as { error: { code: string } }).error.code).toBe('HANDS_AUTH');
     }

@@ -41,7 +41,7 @@ export async function startHarness(): Promise<Harness> {
   const { privateKey, publicKey } = generateKeyPairSync('ed25519');
   const app = await buildHandsServer({
     pool: db.hands,
-    deps: { flightCore: createFakeFlightCore(), buildProfile: fakeBuildProfile },
+    deps: { flightCore: createFakeFlightCore({ dbPath: 'locations.db' }), buildProfile: fakeBuildProfile },
     publicKeys: publicKeyMap([publicKey.export({ type: 'spki', format: 'pem' }).toString()]),
     allowedPeers: ['127.0.0.1/32', '::1/128'],
   });

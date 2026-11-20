@@ -2,7 +2,6 @@
 import type {
   City,
   CityMatch,
-  FlightCore,
   Leg,
   MatchedBy,
   NearestServed,
@@ -17,6 +16,7 @@ import {
   TRANSLITERATION_TABLE,
   ZERO_WIDTH_CHARS_PATTERN,
 } from '@fb/contracts/flight';
+import type { CreateFlightCore } from '../../src/ports.ts';
 
 interface FakeCityDef {
   readonly name: string;
@@ -129,7 +129,9 @@ function seqLess(a: readonly string[], b: readonly string[]): boolean {
   return a.length < b.length;
 }
 
-export function createFakeFlightCore(): FlightCore {
+/** Same signature as T03's `createFlightCore({ dbPath })`; the fixed graph ignores the file. */
+export const createFakeFlightCore: CreateFlightCore = ({ dbPath }) => {
+  if (dbPath === '') throw new Error('dbPath required');
   const byName = new Map<string, City>();
   for (const c of FAKE_CITIES) byName.set(c.name, c);
   const normByName = new Map<string, string>();
@@ -222,6 +224,7 @@ export function createFakeFlightCore(): FlightCore {
           const d = osa(cn, nn);
           if (d <= Math.max(1, Math.floor(maxLen / 4))) score = 1 - d / maxLen;
         }
+        score = Math.round(score * 1e4) / 1e4; // T03 keeps 4 decimals
         if (score <= 0) continue;
         const prev = best.get(c.name);
         if (!prev || score > prev.score) best.set(c.name, { score, index });
@@ -319,4 +322,4 @@ export function createFakeFlightCore(): FlightCore {
   };
 
   return { normalize, getCity, isServed, nearestServed, resolveCity, quoteRoute, dataSha256: LOCATIONS_DB_SHA256 };
-}
+};

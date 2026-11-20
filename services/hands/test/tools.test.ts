@@ -94,13 +94,20 @@ describe('quote_route', () => {
     expect(text).toBe(
       `Quote ${q.quoteId} created: Shanghai → Dubai → São Paulo (2 legs, 1 transfer at Dubai). Distance and price are shown to the user on the quote card. Call offer_booking with this quoteId if the user wants to book.`,
     );
-    // H-01: no distance / price figure in the text (the quote id is the only alphanumeric token with digits)
-    expect(text.replace(q.quoteId, '')).not.toMatch(/\d/);
+    // H-01 / A-02 §7.2: no distance or price figure; the only numbers besides the quote id are the leg count
+    // and the transfer count, exactly as in the spec example "(2 legs, 1 transfer at Dubai)"
+    expect(text.replace(q.quoteId, '').match(/\d+/g)).toEqual(['2', '1']);
 
-    const row = await h.db.owner.query('SELECT user_id, session_id, from_city, to_city, payload FROM app.quotes WHERE id = $1', [
-      q.quoteId,
-    ]);
-    expect(row.rows[0]).toMatchObject({ user_id: s.uid, session_id: s.sid, from_city: 'Shanghai', to_city: 'São Paulo' });
+    const row = await h.db.owner.query(
+      'SELECT user_id, session_id, from_city, to_city, payload FROM app.quotes WHERE id = $1',
+      [q.quoteId],
+    );
+    expect(row.rows[0]).toMatchObject({
+      user_id: s.uid,
+      session_id: s.sid,
+      from_city: 'Shanghai',
+      to_city: 'São Paulo',
+    });
     expect(row.rows[0]?.payload).toEqual(q);
   });
 
@@ -151,7 +158,13 @@ describe('offer_booking', () => {
       llmText: `Booking card shown for ${q.quoteId}. The user must click the confirm button on the card to book. You cannot book on their behalf.`,
       data: { quoteId: q.quoteId, offered: true },
     });
-    expect(await h.count('quote_offers', 'quote_id = $1 AND session_id = $2 AND tool_call_id = $3', [q.quoteId, s.sid, toolCallId])).toBe(1);
+    expect(
+      await h.count('quote_offers', 'quote_id = $1 AND session_id = $2 AND tool_call_id = $3', [
+        q.quoteId,
+        s.sid,
+        toolCallId,
+      ]),
+    ).toBe(1);
     expect(await h.count('tickets', 'quote_id = $1', [q.quoteId])).toBe(0);
     // the same quote may be offered again (another toolCallId)
     expect((await h.call(s, 'offer_booking', { quoteId: q.quoteId })).ok).toBe(true);
@@ -207,7 +220,9 @@ describe('list_my_tickets', () => {
         `[${t1?.ticketNo} 2026-11-10] Shanghai→Dubai→São Paulo, 11000.00 km, USD 1430.00`,
     );
 
-    const dubai = okData<{ tickets: TicketView[]; total: number }>(await h.call(s, 'list_my_tickets', { city: 'Dubai' }));
+    const dubai = okData<{ tickets: TicketView[]; total: number }>(
+      await h.call(s, 'list_my_tickets', { city: 'Dubai' }),
+    );
     expect(dubai.tickets.map((t) => t.quoteId)).toEqual([q1.quoteId]); // Dubai is a transfer endpoint of q1
 
     const limited = await h.call(s, 'list_my_tickets', { limit: 1 });
@@ -247,9 +262,10 @@ describe('save_preference / forget_preference', () => {
     it(`${c.id}: home_city '${c.value}'`, async () => {
       const s = await h.newSession({ lastUserSeq: 9 });
       const r = await h.call(s, 'save_preference', { key: 'home_city', value: c.value }, { inputSeq: 7 });
-      const rows = await h.db.owner.query('SELECT value, source_session_id, source_seq FROM app.user_memories WHERE user_id = $1', [
-        s.uid,
-      ]);
+      const rows = await h.db.owner.query(
+        'SELECT value, source_session_id, source_seq FROM app.user_memories WHERE user_id = $1',
+        [s.uid],
+      );
       if (c.stored !== undefined) {
         expect(r).toEqual({
           ok: true,
@@ -273,7 +289,8 @@ describe('save_preference / forget_preference', () => {
     const e = errOf(await h.call(s, 'save_preference', { key: 'home_city', value: '上海' }));
     expect(e).toEqual({
       code: 'INVALID_INPUT',
-      llmText: "'上海' is not an English city name. Please pass the English city name (resolve it with resolve_city first).",
+      llmText:
+        "'上海' is not an English city name. Please pass the English city name (resolve it with resolve_city first).",
       data: { candidates: [] },
     });
   });
@@ -302,9 +319,10 @@ describe('save_preference / forget_preference', () => {
       llmText: 'Forgot: preferred_language.',
       data: { key: 'preferred_language' },
     });
-    const rows = await h.db.owner.query('SELECT value FROM app.user_memories WHERE user_id = $1 ORDER BY created_at, id', [
-      s.uid,
-    ]);
+    const rows = await h.db.owner.query(
+      'SELECT value FROM app.user_memories WHERE user_id = $1 ORDER BY created_at, id',
+      [s.uid],
+    );
     expect(rows.rows).toEqual([{ value: 'zh' }, { value: null }]);
   });
 
@@ -313,6 +331,51 @@ describe('save_preference / forget_preference', () => {
     await replayed(s, 'save_preference', { key: 'home_city', value: 'Tokyo' });
     await replayed(s, 'forget_preference', { key: 'home_city' });
     expect(await h.count('user_memories', 'user_id = $1', [s.uid])).toBe(2);
+  });
+});
+
+describe('error responses are replayed from tool_calls like successes', () => {
+  it('every hands business error code: same toolCallId -> identical error, one tool_calls row, no side effect', async () => {
+    const s = await h.newSession();
+    const booked = okData<Quote>(await h.call(s, 'quote_route', { from: 'Shanghai', to: 'Dubai' }));
+    await h.issueTicket(booked, s.uid, s.sid);
+    const cases: [string, string, Record<string, unknown>][] = [
+      ['CITY_NOT_FOUND', 'quote_route', { from: 'shanghai', to: 'Tokyo' }],
+      ['CITY_NOT_SERVED', 'quote_route', { from: 'Austin', to: 'Tokyo' }],
+      ['SAME_CITY', 'quote_route', { from: 'Tokyo', to: 'Tokyo' }],
+      ['NO_ROUTE', 'quote_route', { from: 'Reykjavik', to: 'Tokyo' }],
+      ['QUOTE_NOT_FOUND', 'offer_booking', { quoteId: 'q_MISSING' }],
+      ['QUOTE_ALREADY_BOOKED', 'offer_booking', { quoteId: booked.quoteId }],
+      ['CITY_NOT_FOUND', 'list_my_tickets', { city: 'tokyo' }],
+      ['CITY_AMBIGUOUS', 'save_preference', { key: 'home_city', value: 'San Jose' }],
+      ['INVALID_INPUT', 'save_preference', { key: 'home_city', value: 'Sao Paolo' }],
+      ['INVALID_INPUT', 'resolve_city', { original: 'x', candidates: [] }],
+      ['INVALID_INPUT', 'forget_preference', { key: 'avoid_transfer_city' }],
+      ['UNKNOWN_TOOL', 'book_ticket', { quoteId: booked.quoteId }],
+    ];
+    const quotesBefore = await h.count('quotes', 'session_id = $1', [s.sid]);
+    for (const [code, name, input] of cases) {
+      const toolCallId = `call_${randomUUID()}`;
+      const first = await h.call(s, name, input, { toolCallId });
+      expect({ name, code: errOf(first).code }).toEqual({ name, code });
+      expect(await h.call(s, name, input, { toolCallId })).toEqual(first);
+      expect(await h.count('tool_calls', 'session_id = $1 AND tool_call_id = $2', [s.sid, toolCallId])).toBe(1);
+    }
+    expect(await h.count('quotes', 'session_id = $1', [s.sid])).toBe(quotesBefore);
+    expect(await h.count('quote_offers', 'session_id = $1', [s.sid])).toBe(0);
+    expect(await h.count('user_memories', 'user_id = $1', [s.uid])).toBe(0);
+  });
+
+  it('a replay returns the stored response even after the world changed (offer, then ticket issued)', async () => {
+    const s = await h.newSession();
+    const q = okData<Quote>(await h.call(s, 'quote_route', { from: 'Shanghai', to: 'Tokyo' }));
+    const toolCallId = `call_${randomUUID()}`;
+    const first = await h.call(s, 'offer_booking', { quoteId: q.quoteId }, { toolCallId });
+    expect(first.ok).toBe(true);
+    await h.issueTicket(q, s.uid, s.sid);
+    expect(await h.call(s, 'offer_booking', { quoteId: q.quoteId }, { toolCallId })).toEqual(first);
+    expect(errOf(await h.call(s, 'offer_booking', { quoteId: q.quoteId })).code).toBe('QUOTE_ALREADY_BOOKED');
+    expect(await h.count('quote_offers', 'quote_id = $1', [q.quoteId])).toBe(1);
   });
 });
 

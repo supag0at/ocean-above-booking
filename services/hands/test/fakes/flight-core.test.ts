@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createFakeFlightCore } from './flight-core.ts';
 
-const core = createFakeFlightCore();
+const core = createFakeFlightCore({ dbPath: 'locations.db' });
 
 describe('fake flight-core', () => {
   it('normalizes', () => {

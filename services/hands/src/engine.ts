@@ -107,7 +107,13 @@ export function createEngine(pool: Pool, deps: HandsDeps, clock: () => Date = ()
       }
       await insertToolCall(
         client,
-        { sessionId: who.sessionId, runId: call.runId, toolCallId: call.toolCallId, name: call.name, inputSha256: hash },
+        {
+          sessionId: who.sessionId,
+          runId: call.runId,
+          toolCallId: call.toolCallId,
+          name: call.name,
+          inputSha256: hash,
+        },
         response,
       );
       return response;

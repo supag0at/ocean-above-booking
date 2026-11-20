@@ -6,6 +6,12 @@ import type { ProfileSnapshot } from '@fb/contracts/server';
 
 export type { FlightCore };
 
+/** Factory shape of T03's `createFlightCore({ dbPath })`; opens locations.db read-only and checks its sha256. */
+export interface FlightCoreOptions {
+  readonly dbPath: string;
+}
+export type CreateFlightCore = (options: FlightCoreOptions) => FlightCore;
+
 export type MemoryKey = 'home_city' | 'preferred_language';
 
 /** One `app.user_memories` row (A-01 §3.2). `value === null` is a tombstone. `id` is the DB uuid (M-24). */

@@ -6,7 +6,10 @@ import { fail, ok, type ToolHandler } from './types.ts';
 export const offerBooking: ToolHandler = async (ctx, raw) => {
   const { quoteId } = raw as OfferBookingParamsT;
   if (!(await quoteInSession(ctx.db, quoteId, ctx.sessionId, ctx.userId))) {
-    return fail('QUOTE_NOT_FOUND', `Quote ${quoteId} does not exist in this conversation. Create one with quote_route.`);
+    return fail(
+      'QUOTE_NOT_FOUND',
+      `Quote ${quoteId} does not exist in this conversation. Create one with quote_route.`,
+    );
   }
   const ticketNo = await ticketNoForQuote(ctx.db, quoteId);
   if (ticketNo !== undefined) {

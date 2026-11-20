@@ -36,38 +36,42 @@ export function handsServerOptions(o: HandsServerOptions): ServerOptions {
       await o.pool.query('SELECT 1');
     },
     routes: (app) => {
-      app.post<{ Body: ExecuteRequest }>(EXECUTE_PATH, { schema: { body: ExecuteRequestSchema } }, async (req, reply) => {
-        const started = Date.now();
-        const traceId = req.trace.traceId;
-        const body = req.body;
-        const auth = await authenticate(req.headers.authorization, o.publicKeys, o.pool, nowSec());
-        if (!auth.ok) {
-          req.log.warn({ tool: body.name, reason: auth.reason, traceId }, 'hands auth rejected');
-          // HANDS_AUTH is an agent-side code without an HTTP-table entry; 401 makes harness re-acquire the token.
-          return reply.code(401).send({ error: { code: 'HANDS_AUTH', message: 'invalid hands token', traceId } });
-        }
-        if (body.inputSeq > auth.lastUserSeq) {
-          return reply
-            .code(400)
-            .send(errorEnvelope('VALIDATION_FAILED', 'inputSeq is beyond the session last_user_seq', traceId));
-        }
-        const res = await engine.execute(
-          { sessionId: auth.sessionId, userId: auth.userId },
-          {
-            name: body.name,
-            input: body.input,
-            toolCallId: body.toolCallId,
-            runId: body.runId,
-            inputSeq: body.inputSeq,
-          },
-        );
-        // one line per call: tool, duration, result code — never the arguments (A-01 §5.5)
-        req.log.info(
-          { tool: body.name, ms: Date.now() - started, code: res.ok ? 'OK' : res.error.code, traceId },
-          'tool executed',
-        );
-        return res;
-      });
+      app.post<{ Body: ExecuteRequest }>(
+        EXECUTE_PATH,
+        { schema: { body: ExecuteRequestSchema } },
+        async (req, reply) => {
+          const started = Date.now();
+          const traceId = req.trace.traceId;
+          const body = req.body;
+          const auth = await authenticate(req.headers.authorization, o.publicKeys, o.pool, nowSec());
+          if (!auth.ok) {
+            req.log.warn({ tool: body.name, reason: auth.reason, traceId }, 'hands auth rejected');
+            // HANDS_AUTH is an agent-side code without an HTTP-table entry; 401 makes harness re-acquire the token.
+            return reply.code(401).send({ error: { code: 'HANDS_AUTH', message: 'invalid hands token', traceId } });
+          }
+          if (body.inputSeq > auth.lastUserSeq) {
+            return reply
+              .code(400)
+              .send(errorEnvelope('VALIDATION_FAILED', 'inputSeq is beyond the session last_user_seq', traceId));
+          }
+          const res = await engine.execute(
+            { sessionId: auth.sessionId, userId: auth.userId },
+            {
+              name: body.name,
+              input: body.input,
+              toolCallId: body.toolCallId,
+              runId: body.runId,
+              inputSeq: body.inputSeq,
+            },
+          );
+          // one line per call: tool, duration, result code — never the arguments (A-01 §5.5)
+          req.log.info(
+            { tool: body.name, ms: Date.now() - started, code: res.ok ? 'OK' : res.error.code, traceId },
+            'tool executed',
+          );
+          return res;
+        },
+      );
     },
   };
 }
