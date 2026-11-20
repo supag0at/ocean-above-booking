@@ -1,0 +1,154 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`toPublicEvent (CT-09) > snapshot 1`] = `
+[
+  {
+    "actor": "user",
+    "payload": {
+      "clientMessageId": "6f1c9e64-7d0d-4bb5-9e3d-1c2b3a4d5e6f",
+      "text": "hi <b>",
+    },
+    "seq": 1,
+    "ts": "2026-11-19T00:00:00.000Z",
+    "type": "user.message",
+  },
+  {
+    "actor": "agent",
+    "payload": {},
+    "seq": 2,
+    "ts": "2026-11-19T00:00:00.000Z",
+    "type": "hidden",
+  },
+  {
+    "actor": "agent",
+    "payload": {
+      "kind": "process",
+      "messageKey": "m:p",
+      "processText": "checking 1234 km",
+      "runId": "run_0123456789ABCDEFGHJKMNPQRS",
+    },
+    "seq": 3,
+    "ts": "2026-11-19T00:00:00.000Z",
+    "type": "agent.message",
+  },
+  {
+    "actor": "agent",
+    "payload": {
+      "kind": "reply",
+      "messageKey": "m:r",
+      "runId": "run_0123456789ABCDEFGHJKMNPQRS",
+      "template": "llm_unavailable",
+      "text": "final reply",
+    },
+    "seq": 4,
+    "ts": "2026-11-19T00:00:00.000Z",
+    "type": "agent.message",
+  },
+  {
+    "actor": "agent",
+    "payload": {
+      "isError": false,
+      "messageKey": "tr:x",
+      "runId": "run_0123456789ABCDEFGHJKMNPQRS",
+      "toolCallId": "tc1",
+      "toolName": "search_routes",
+    },
+    "seq": 5,
+    "ts": "2026-11-19T00:00:00.000Z",
+    "type": "agent.message",
+  },
+  {
+    "actor": "agent",
+    "payload": {
+      "runId": "run_0123456789ABCDEFGHJKMNPQRS",
+    },
+    "seq": 6,
+    "ts": "2026-11-19T00:00:00.000Z",
+    "type": "agent.run_started",
+  },
+  {
+    "actor": "agent",
+    "payload": {
+      "attempt": 2,
+      "runId": "run_0123456789ABCDEFGHJKMNPQRS",
+    },
+    "seq": 7,
+    "ts": "2026-11-19T00:00:00.000Z",
+    "type": "agent.run_resumed",
+  },
+  {
+    "actor": "agent",
+    "payload": {
+      "runId": "run_0123456789ABCDEFGHJKMNPQRS",
+    },
+    "seq": 8,
+    "ts": "2026-11-19T00:00:00.000Z",
+    "type": "agent.run_completed",
+  },
+  {
+    "actor": "agent",
+    "payload": {
+      "code": "LLM_ERROR",
+      "runId": "run_0123456789ABCDEFGHJKMNPQRS",
+    },
+    "seq": 9,
+    "ts": "2026-11-19T00:00:00.000Z",
+    "type": "agent.run_failed",
+  },
+  {
+    "actor": "agent",
+    "payload": {
+      "action": "regenerate",
+      "messageKey": "m:g",
+      "runId": "run_0123456789ABCDEFGHJKMNPQRS",
+    },
+    "seq": 10,
+    "ts": "2026-11-19T00:00:00.000Z",
+    "type": "agent.guard_violation",
+  },
+  {
+    "actor": "agent",
+    "payload": {},
+    "seq": 11,
+    "ts": "2026-11-19T00:00:00.000Z",
+    "type": "hidden",
+  },
+  {
+    "actor": "agent",
+    "payload": {
+      "quoteId": "q_0123456789ABCDEFGHJKMNPQRS",
+    },
+    "seq": 12,
+    "ts": "2026-11-19T00:00:00.000Z",
+    "type": "quote.offered",
+  },
+  {
+    "actor": "system",
+    "payload": {
+      "quoteId": "q_0123456789ABCDEFGHJKMNPQRS",
+      "ticketId": "t_0123456789ABCDEFGHJKMNPQRS",
+      "ticketNo": "OA-HJKMNPQRS",
+    },
+    "seq": 13,
+    "ts": "2026-11-19T00:00:00.000Z",
+    "type": "booking.confirmed",
+  },
+  {
+    "actor": "system",
+    "payload": {
+      "code": "QUOTE_NOT_OFFERED",
+      "quoteId": "q_0123456789ABCDEFGHJKMNPQRS",
+    },
+    "seq": 14,
+    "ts": "2026-11-19T00:00:00.000Z",
+    "type": "booking.failed",
+  },
+  {
+    "actor": "agent",
+    "payload": {},
+    "seq": 15,
+    "ts": "2026-11-19T00:00:00.000Z",
+    "type": "hidden",
+  },
+]
+`;
