@@ -8,4 +8,5 @@ export * from './events.ts';
 export * from './whitelist.ts';
 export * from './api.ts';
 export * from './escape.ts';
+export * from './hands-token.ts';
 export { LOCATIONS_DB_SHA256 } from '../flight/index.ts';

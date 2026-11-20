@@ -133,10 +133,13 @@ const forbidden = [
   // ---------------------------------------------------------------- packages/flight-core
   {
     name: 'flight-core-allowed',
-    comment: 'A-01 §1.2 flight-core 允许: contracts, node:sqlite, node:crypto.',
+    comment:
+      'A-01 §1.2 flight-core 允许: contracts, node:sqlite, node:crypto, node:fs (M-24: readFileSync of locations.db for the sha256 check only).',
     severity: 'error',
     from: { path: '^packages/flight-core/' },
-    to: { pathNot: any('^packages/flight-core/', '^@fb/flight-core(/|$)', CONTRACTS_ANY, core('sqlite', 'crypto')) },
+    to: {
+      pathNot: any('^packages/flight-core/', '^@fb/flight-core(/|$)', CONTRACTS_ANY, core('sqlite', 'crypto', 'fs')),
+    },
   },
   {
     name: 'flight-core-forbidden',

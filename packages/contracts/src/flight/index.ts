@@ -133,6 +133,8 @@ export interface CityMatch {
   readonly connectedHubs: readonly string[];
   /** MUST be non-null when `served` is false (A-02 §7.1); null when served. */
   readonly nearestServed: NearestServed | null;
+  /** M-24: optional match score 0..1. */
+  readonly score?: number;
 }
 
 export type ResolveStatus = 'exact' | 'ambiguous' | 'suggest' | 'not_found';

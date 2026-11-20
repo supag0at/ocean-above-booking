@@ -7,6 +7,7 @@
 // compatibility); no identity fields anywhere (H-04: identity comes from the hands token).
 import { Type } from 'typebox';
 import type { Static, TSchema } from 'typebox';
+import { Value } from 'typebox/value';
 import { QuoteSchema, TicketViewSchema, type ErrorCode } from '../web/index.ts';
 
 // ---------------------------------------------------------------------------------------------
@@ -180,6 +181,8 @@ const CityMatchSchema = Type.Object(
     served: Type.Boolean(),
     connectedHubs: Type.Array(Type.String()),
     nearestServed: Type.Union([NearestServedSchema, Type.Null()]),
+    /** M-24: optional match score 0..1 (for llmText like "Zürich (0.93)"). */
+    score: Type.Optional(Type.Number({ minimum: 0, maximum: 1 })),
   },
   { additionalProperties: false },
 );
@@ -387,3 +390,25 @@ export type ToolName =
   | typeof listMyTicketsTool.name
   | typeof savePreferenceTool.name
   | typeof forgetPreferenceTool.name;
+
+// ---------------------------------------------------------------------------------------------
+// M-24 (v1.1.0): strict, non-coercing argument check shared by harness (CT-08, beforeToolCall)
+// and hands (A-02 §5.1). Single source so neither service needs its own typebox dependency.
+
+export type ToolArgsCheck =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly errors: readonly { readonly path: string; readonly message: string }[] };
+
+const TOOLS_BY_NAME: ReadonlyMap<string, ToolDefinition> = new Map(ALL_TOOLS.map((t) => [t.name, t]));
+
+/** Validate the model's RAW arguments against the tool schema. Never coerces or strips (unlike pi's validator). */
+export function checkToolArgs(name: string, raw: unknown): ToolArgsCheck {
+  const tool = TOOLS_BY_NAME.get(name);
+  if (tool === undefined) return { ok: false, errors: [{ path: '', message: `unknown tool: ${name}` }] };
+  if (Value.Check(tool.parameters, raw)) return { ok: true };
+  const errors = [...Value.Errors(tool.parameters, raw)].slice(0, 10).map((e) => ({
+    path: e.instancePath,
+    message: String(e.message),
+  }));
+  return { ok: false, errors: errors.length > 0 ? errors : [{ path: '', message: 'invalid arguments' }] };
+}

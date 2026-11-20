@@ -1,5 +1,9 @@
 # 契约 CHANGELOG
 
+## v1.1.0（2026-11-19，父会话）
+- M-24：新增 `checkToolArgs`、hands token 编解码；flight-core 可用 node:fs；CityMatch 加可选 score；记忆 ID 改用 uuid（撤销 m_）；tickets-insert 护栏放行服务测试目录；模板和出票正则留在 harness 本地。
+- 受影响的会话：T03、T06、T08、T09，均已广播。
+
 ## v1.0.2（2026-11-19，父会话，澄清）
 - M-23：数字守卫的窗口归属规则、语言判断的分母和显式偏好、hands 超时、`save_preference` 的中文值、OSA 编辑距离、相对时间、作废一条打码断言。来源是 T13a 的评测用例审查。
 - 受影响的会话：T03（⑤）、T08（③④）、T09（①②③⑦），均已广播。
