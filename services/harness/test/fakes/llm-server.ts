@@ -13,6 +13,8 @@ export interface ScriptedReply {
   readonly status?: number;
   /** never answer (request-timeout tests) */
   readonly hang?: boolean;
+  /** send the 200 headers and this many content chunks, then keep the socket open without finishing */
+  readonly stallAfter?: number;
   /** split text/thinking into chunks of this size (default 7) */
   readonly chunk?: number;
 }
@@ -76,6 +78,10 @@ export class FakeLlmServer {
     };
     const size = reply.chunk ?? 7;
     send({ role: 'assistant', content: '' });
+    if (reply.stallAfter !== undefined) {
+      for (const part of split(reply.text ?? '', size).slice(0, reply.stallAfter)) send({ content: part });
+      return; // keep the socket open mid-stream
+    }
     for (const part of split(reply.thinking ?? '', size)) send({ reasoning_content: part });
     for (const part of split(reply.text ?? '', size)) send({ content: part });
     (reply.toolCalls ?? []).forEach((tc, i) => {

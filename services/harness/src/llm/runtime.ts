@@ -41,7 +41,7 @@ export function createLlm(opts: LlmOptions): Llm {
 }
 
 export type RuntimeEvent =
-  /** the provider request is about to be sent (from onPayload): start of the 60s request timer */
+  /** the provider request is about to be sent (from onPayload) */
   | { readonly type: 'request_start'; readonly payload: unknown }
   | { readonly type: 'assistant_start' }
   | { readonly type: 'text_delta'; readonly delta: string }

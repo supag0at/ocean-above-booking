@@ -233,6 +233,29 @@ describe('ending table', () => {
     expect(ofT(evs, 'agent.run_failed').map((e) => [P(e).code, P(e).retryable])).toEqual([['LLM_ERROR', true]]);
   });
 
+  it('request timeout (§3.5): a stream stalled after message_start is aborted after requestTimeoutMs and retried', async () => {
+    const sid = w.session.createSession('en');
+    w.session.addUserMessage(sid, 'hello');
+    w.llm.script = () => ({ text: 'partial answer that never ends', stallAfter: 1 });
+    await onJob(w.deps('wA', { limits: { requestTimeoutMs: 150 } }), sid);
+    const evs = w.session.events(sid);
+    expect(w.llm.requests.length).toBe(3); // first try + 2 retries, like LLM errors
+    expect(msgs(evs, 'assistant').map((e) => (P(e).meta as { template: string }).template)).toEqual([
+      'llm_unavailable',
+    ]);
+    expect(ofT(evs, 'agent.run_failed').map((e) => [P(e).code, P(e).retryable])).toEqual([['LLM_ERROR', true]]);
+  });
+
+  it('a request that never starts streaming is bounded by the run timer, not the request timer (M-23 ③)', async () => {
+    const sid = w.session.createSession('en');
+    w.session.addUserMessage(sid, 'hello');
+    w.llm.script = () => ({ hang: true });
+    await onJob(w.deps('wA', { limits: { requestTimeoutMs: 50, runTimeoutMs: 600 } }), sid);
+    const evs = w.session.events(sid);
+    expect(w.llm.requests.length).toBe(1); // no request_timeout retry: message_start never came
+    expect(ofT(evs, 'agent.run_failed').map((e) => P(e).code)).toEqual(['RUN_TIMEOUT']);
+  });
+
   it('length twice → LLM_LENGTH', async () => {
     const sid = w.session.createSession('en');
     w.session.addUserMessage(sid, 'hello');

@@ -950,11 +950,13 @@ class RunContext {
       try {
         switch (e.type) {
           case 'request_start':
-            clearReq();
-            reqTimer = setTimeout(() => abort('request_timeout'), this.limits.requestTimeoutMs);
             this.deps.onLlmPayload?.(e.payload);
             return;
           case 'assistant_start':
+            // A-02 §3.5: the 60s request timer runs from the assistant message_start to its message_end; a request
+            // that never starts streaming is bounded by the 120s run timer (M-23 ③: whichever fires first)
+            clearReq();
+            reqTimer = setTimeout(() => abort('request_timeout'), this.limits.requestTimeoutMs);
             current = { n: nextN, key: assistantMessageKey(this.runId, this.attempt, nextN) };
             nextN++;
             return;
