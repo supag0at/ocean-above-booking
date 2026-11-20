@@ -10,8 +10,11 @@ import { buildBookingApp } from './server.ts';
 
 export async function main(): Promise<void> {
   const config = loadBookingConfig();
-  // /run/secrets only (A-01 §2.3); preload so a missing file fails startup (A-01 §2.4)
+  // /run/secrets unless SECRETS_DIR is set (host integration). Unset keeps the container path (A-01 §2.3).
+  // Preload so a missing file fails startup (A-01 §2.4).
+  const secretsDir = process.env.SECRETS_DIR?.trim();
   const secrets = new FileSecretProvider({
+    ...(secretsDir !== undefined && secretsDir !== '' ? { dir: secretsDir } : {}),
     files: BOOKING_SECRET_FILES,
     preload: ['pg_password', 'booking_service_token'],
   });
