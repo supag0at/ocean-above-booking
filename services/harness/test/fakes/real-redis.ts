@@ -20,9 +20,7 @@ function docker(method: string, path: string, body?: unknown): Promise<{ status:
       (res) => {
         const chunks: Buffer[] = [];
         res.on('data', (c: Buffer) => chunks.push(c));
-        res.on('end', () =>
-          resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString('utf8') }),
-        );
+        res.on('end', () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString('utf8') }));
       },
     );
     req.on('timeout', () => req.destroy(new Error(`docker ${method} ${path} timed out`)));
