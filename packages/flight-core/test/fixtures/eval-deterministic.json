@@ -1,0 +1,2944 @@
+{
+  "generatedFrom": "git main b478386 eval/cases/deterministic (T13a), converted to JSON verbatim by T03; do not hand-edit",
+  "sources": {
+    "eval/cases/deterministic/route.yaml": "181fa9f0425d0f824928df507631f8abce51e17b11b8932ec074bedd48320b62",
+    "eval/cases/deterministic/resolve.yaml": "734e4d76796302812af9bcaddc92a0648a2b98f2b5e5b0487b6906079382be6b",
+    "eval/cases/deterministic/nearest_served.yaml": "aa292d3c8d46752e5f1d4e351192fc1a5c5460d45f3ef59e9862cacf0dd38782"
+  },
+  "cases": [
+    {
+      "id": "det-route-001",
+      "fn": "quote",
+      "input": {
+        "from": "Chengdu",
+        "to": "Shanghai"
+      },
+      "tags": ["direct", "nonhub-hub"],
+      "note": "direct leg non-hub -> its connected hub",
+      "expect": {
+        "ok": true,
+        "path": ["Chengdu", "Shanghai"],
+        "legs": [
+          {
+            "from": "Chengdu",
+            "to": "Shanghai",
+            "distanceKm": 1996.316858617389
+          }
+        ],
+        "transferCities": [],
+        "totalDistanceKm": 1996.316858617389,
+        "priceCents": 25952,
+        "display": {
+          "legs": ["1996.32"],
+          "totalDistanceKm": "1996.32",
+          "priceUsd": "259.52"
+        }
+      }
+    },
+    {
+      "id": "det-route-002",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Chengdu"
+      },
+      "tags": ["direct", "reverse"],
+      "note": "reverse of 001; must be symmetric",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Chengdu"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Chengdu",
+            "distanceKm": 1996.316858617389
+          }
+        ],
+        "transferCities": [],
+        "totalDistanceKm": 1996.316858617389,
+        "priceCents": 25952,
+        "display": {
+          "legs": ["1996.32"],
+          "totalDistanceKm": "1996.32",
+          "priceUsd": "259.52"
+        }
+      }
+    },
+    {
+      "id": "det-route-003",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Wrocław"
+      },
+      "tags": ["direct", "translit"],
+      "note": "Wrocław only connects to Shanghai",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Wrocław"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Wrocław",
+            "distanceKm": 1560.243891191374
+          }
+        ],
+        "transferCities": [],
+        "totalDistanceKm": 1560.243891191374,
+        "priceCents": 20283,
+        "display": {
+          "legs": ["1560.24"],
+          "totalDistanceKm": "1560.24",
+          "priceUsd": "202.83"
+        }
+      }
+    },
+    {
+      "id": "det-route-004",
+      "fn": "quote",
+      "input": {
+        "from": "Tokyo",
+        "to": "San Jose"
+      },
+      "tags": ["direct", "same-norm"],
+      "note": "San Jose (no accent) only connects Tokyo",
+      "expect": {
+        "ok": true,
+        "path": ["Tokyo", "San Jose"],
+        "legs": [
+          {
+            "from": "Tokyo",
+            "to": "San Jose",
+            "distanceKm": 195.2434377898525
+          }
+        ],
+        "transferCities": [],
+        "totalDistanceKm": 195.2434377898525,
+        "priceCents": 2538,
+        "display": {
+          "legs": ["195.24"],
+          "totalDistanceKm": "195.24",
+          "priceUsd": "25.38"
+        }
+      }
+    },
+    {
+      "id": "det-route-005",
+      "fn": "quote",
+      "input": {
+        "from": "Tokyo",
+        "to": "San José"
+      },
+      "tags": ["direct", "same-norm"],
+      "note": "San José is a different city: different distance",
+      "expect": {
+        "ok": true,
+        "path": ["Tokyo", "San José"],
+        "legs": [
+          {
+            "from": "Tokyo",
+            "to": "San José",
+            "distanceKm": 1969.2231971008264
+          }
+        ],
+        "transferCities": [],
+        "totalDistanceKm": 1969.2231971008264,
+        "priceCents": 25600,
+        "display": {
+          "legs": ["1969.22"],
+          "totalDistanceKm": "1969.22",
+          "priceUsd": "256.00"
+        }
+      }
+    },
+    {
+      "id": "det-route-006",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Townsville"
+      },
+      "tags": ["direct"],
+      "note": "direct spoke",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Townsville"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Townsville",
+            "distanceKm": 834.3170860050752
+          }
+        ],
+        "transferCities": [],
+        "totalDistanceKm": 834.3170860050752,
+        "priceCents": 10846,
+        "display": {
+          "legs": ["834.32"],
+          "totalDistanceKm": "834.32",
+          "priceUsd": "108.46"
+        }
+      }
+    },
+    {
+      "id": "det-route-007",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "São Paulo"
+      },
+      "tags": ["hub-hub", "transfer"],
+      "note": "both hubs, no hub_link -> 1 transfer",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Hong Kong", "São Paulo"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Hong Kong",
+            "distanceKm": 1717.8559310955038
+          },
+          {
+            "from": "Hong Kong",
+            "to": "São Paulo",
+            "distanceKm": 1542.0693888408523
+          }
+        ],
+        "transferCities": ["Hong Kong"],
+        "totalDistanceKm": 3259.925319936356,
+        "priceCents": 42379,
+        "display": {
+          "legs": ["1717.86", "1542.07"],
+          "totalDistanceKm": "3259.93",
+          "priceUsd": "423.79"
+        }
+      }
+    },
+    {
+      "id": "det-route-008",
+      "fn": "quote",
+      "input": {
+        "from": "São Paulo",
+        "to": "Shanghai"
+      },
+      "tags": ["hub-hub", "reverse"],
+      "note": "reverse of 007",
+      "expect": {
+        "ok": true,
+        "path": ["São Paulo", "Hong Kong", "Shanghai"],
+        "legs": [
+          {
+            "from": "São Paulo",
+            "to": "Hong Kong",
+            "distanceKm": 1542.0693888408523
+          },
+          {
+            "from": "Hong Kong",
+            "to": "Shanghai",
+            "distanceKm": 1717.8559310955038
+          }
+        ],
+        "transferCities": ["Hong Kong"],
+        "totalDistanceKm": 3259.925319936356,
+        "priceCents": 42379,
+        "display": {
+          "legs": ["1542.07", "1717.86"],
+          "totalDistanceKm": "3259.93",
+          "priceUsd": "423.79"
+        }
+      }
+    },
+    {
+      "id": "det-route-009",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Tokyo"
+      },
+      "tags": ["hub-hub", "transfer"],
+      "note": "both hubs but NOT linked; via Atlanta (fictional coords)",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Atlanta", "Tokyo"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Atlanta",
+            "distanceKm": 5040.015872990878
+          },
+          {
+            "from": "Atlanta",
+            "to": "Tokyo",
+            "distanceKm": 2115.0756487653107
+          }
+        ],
+        "transferCities": ["Atlanta"],
+        "totalDistanceKm": 7155.091521756189,
+        "priceCents": 93016,
+        "display": {
+          "legs": ["5040.02", "2115.08"],
+          "totalDistanceKm": "7155.09",
+          "priceUsd": "930.16"
+        }
+      }
+    },
+    {
+      "id": "det-route-010",
+      "fn": "quote",
+      "input": {
+        "from": "New York",
+        "to": "London"
+      },
+      "tags": ["hub-hub", "transfer"],
+      "note": "real-world intuition says direct; data says via Lagos",
+      "expect": {
+        "ok": true,
+        "path": ["New York", "Lagos", "London"],
+        "legs": [
+          {
+            "from": "New York",
+            "to": "Lagos",
+            "distanceKm": 2233.841981877859
+          },
+          {
+            "from": "Lagos",
+            "to": "London",
+            "distanceKm": 1539.7675149190543
+          }
+        ],
+        "transferCities": ["Lagos"],
+        "totalDistanceKm": 3773.609496796913,
+        "priceCents": 49057,
+        "display": {
+          "legs": ["2233.84", "1539.77"],
+          "totalDistanceKm": "3773.61",
+          "priceUsd": "490.57"
+        }
+      }
+    },
+    {
+      "id": "det-route-011",
+      "fn": "quote",
+      "input": {
+        "from": "Beijing",
+        "to": "Tromsø"
+      },
+      "tags": ["transfer", "translit"],
+      "note": "ø transliteration city",
+      "expect": {
+        "ok": true,
+        "path": ["Beijing", "Johannesburg", "Tromsø"],
+        "legs": [
+          {
+            "from": "Beijing",
+            "to": "Johannesburg",
+            "distanceKm": 3628.0117144243072
+          },
+          {
+            "from": "Johannesburg",
+            "to": "Tromsø",
+            "distanceKm": 509.4192772167147
+          }
+        ],
+        "transferCities": ["Johannesburg"],
+        "totalDistanceKm": 4137.430991641022,
+        "priceCents": 53787,
+        "display": {
+          "legs": ["3628.01", "509.42"],
+          "totalDistanceKm": "4137.43",
+          "priceUsd": "537.87"
+        }
+      }
+    },
+    {
+      "id": "det-route-012",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Zürich"
+      },
+      "tags": ["multi-transfer"],
+      "note": "3 legs",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Hong Kong", "Lagos", "Zürich"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Hong Kong",
+            "distanceKm": 1717.8559310955038
+          },
+          {
+            "from": "Hong Kong",
+            "to": "Lagos",
+            "distanceKm": 2819.1353284296233
+          },
+          {
+            "from": "Lagos",
+            "to": "Zürich",
+            "distanceKm": 794.9087998003293
+          }
+        ],
+        "transferCities": ["Hong Kong", "Lagos"],
+        "totalDistanceKm": 5331.900059325457,
+        "priceCents": 69315,
+        "display": {
+          "legs": ["1717.86", "2819.14", "794.91"],
+          "totalDistanceKm": "5331.90",
+          "priceUsd": "693.15"
+        }
+      }
+    },
+    {
+      "id": "det-route-013",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Copenhagen"
+      },
+      "tags": ["multi-transfer"],
+      "note": "4 legs (Austin's nearest served city)",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Dallas", "New York", "Los Angeles", "Copenhagen"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Dallas",
+            "distanceKm": 1761.2509758691406
+          },
+          {
+            "from": "Dallas",
+            "to": "New York",
+            "distanceKm": 2040.9473290606986
+          },
+          {
+            "from": "New York",
+            "to": "Los Angeles",
+            "distanceKm": 2384.5077060055814
+          },
+          {
+            "from": "Los Angeles",
+            "to": "Copenhagen",
+            "distanceKm": 773.0853769151245
+          }
+        ],
+        "transferCities": ["Dallas", "New York", "Los Angeles"],
+        "totalDistanceKm": 6959.791387850545,
+        "priceCents": 90477,
+        "display": {
+          "legs": ["1761.25", "2040.95", "2384.51", "773.09"],
+          "totalDistanceKm": "6959.79",
+          "priceUsd": "904.77"
+        }
+      }
+    },
+    {
+      "id": "det-route-014",
+      "fn": "quote",
+      "input": {
+        "from": "Washington, D.C.",
+        "to": "St. John's"
+      },
+      "tags": ["multi-transfer", "punctuation"],
+      "note": "5 legs, names with , . '",
+      "expect": {
+        "ok": true,
+        "path": ["Washington, D.C.", "Sydney", "Miami", "Mexico City", "Los Angeles", "St. John's"],
+        "legs": [
+          {
+            "from": "Washington, D.C.",
+            "to": "Sydney",
+            "distanceKm": 161.13658802394943
+          },
+          {
+            "from": "Sydney",
+            "to": "Miami",
+            "distanceKm": 3183.81437901144
+          },
+          {
+            "from": "Miami",
+            "to": "Mexico City",
+            "distanceKm": 1505.6387348896149
+          },
+          {
+            "from": "Mexico City",
+            "to": "Los Angeles",
+            "distanceKm": 2404.148497909395
+          },
+          {
+            "from": "Los Angeles",
+            "to": "St. John's",
+            "distanceKm": 768.1959385469308
+          }
+        ],
+        "transferCities": ["Sydney", "Miami", "Mexico City", "Los Angeles"],
+        "totalDistanceKm": 8022.93413838133,
+        "priceCents": 104298,
+        "display": {
+          "legs": ["161.14", "3183.81", "1505.64", "2404.15", "768.20"],
+          "totalDistanceKm": "8022.93",
+          "priceUsd": "1042.98"
+        }
+      }
+    },
+    {
+      "id": "det-route-015",
+      "fn": "quote",
+      "input": {
+        "from": "Bangkok",
+        "to": "Madrid"
+      },
+      "tags": ["multi-transfer", "max-hub-pair"],
+      "note": "longest hub-to-hub route: 6 legs",
+      "expect": {
+        "ok": true,
+        "path": ["Bangkok", "Dallas", "New York", "Paris", "Beijing", "Singapore", "Madrid"],
+        "legs": [
+          {
+            "from": "Bangkok",
+            "to": "Dallas",
+            "distanceKm": 2016.815559241846
+          },
+          {
+            "from": "Dallas",
+            "to": "New York",
+            "distanceKm": 2040.9473290606986
+          },
+          {
+            "from": "New York",
+            "to": "Paris",
+            "distanceKm": 7863.191781967422
+          },
+          {
+            "from": "Paris",
+            "to": "Beijing",
+            "distanceKm": 2259.331759613891
+          },
+          {
+            "from": "Beijing",
+            "to": "Singapore",
+            "distanceKm": 2136.3934562715735
+          },
+          {
+            "from": "Singapore",
+            "to": "Madrid",
+            "distanceKm": 2311.325377353868
+          }
+        ],
+        "transferCities": ["Dallas", "New York", "Paris", "Beijing", "Singapore"],
+        "totalDistanceKm": 18628.005263509298,
+        "priceCents": 242164,
+        "display": {
+          "legs": ["2016.82", "2040.95", "7863.19", "2259.33", "2136.39", "2311.33"],
+          "totalDistanceKm": "18628.01",
+          "priceUsd": "2421.64"
+        }
+      }
+    },
+    {
+      "id": "det-route-016",
+      "fn": "quote",
+      "input": {
+        "from": "Dallas",
+        "to": "Istanbul"
+      },
+      "tags": ["multi-transfer", "max-hub-pair"],
+      "note": "6 legs hub-to-hub",
+      "expect": {
+        "ok": true,
+        "path": ["Dallas", "New York", "Los Angeles", "Mexico City", "Delhi", "Cairo", "Istanbul"],
+        "legs": [
+          {
+            "from": "Dallas",
+            "to": "New York",
+            "distanceKm": 2040.9473290606986
+          },
+          {
+            "from": "New York",
+            "to": "Los Angeles",
+            "distanceKm": 2384.5077060055814
+          },
+          {
+            "from": "Los Angeles",
+            "to": "Mexico City",
+            "distanceKm": 2404.148497909395
+          },
+          {
+            "from": "Mexico City",
+            "to": "Delhi",
+            "distanceKm": 6049.8589239750045
+          },
+          {
+            "from": "Delhi",
+            "to": "Cairo",
+            "distanceKm": 1963.6000101853738
+          },
+          {
+            "from": "Cairo",
+            "to": "Istanbul",
+            "distanceKm": 1630.1490729378095
+          }
+        ],
+        "transferCities": ["New York", "Los Angeles", "Mexico City", "Delhi", "Cairo"],
+        "totalDistanceKm": 16473.211540073862,
+        "priceCents": 214152,
+        "display": {
+          "legs": ["2040.95", "2384.51", "2404.15", "6049.86", "1963.60", "1630.15"],
+          "totalDistanceKm": "16473.21",
+          "priceUsd": "2141.52"
+        }
+      }
+    },
+    {
+      "id": "det-route-017",
+      "fn": "quote",
+      "input": {
+        "from": "Dubai",
+        "to": "Mecca"
+      },
+      "tags": ["cheapest-not-fewest"],
+      "note": "a 2-leg route exists but cheapest has 6 legs",
+      "expect": {
+        "ok": true,
+        "path": ["Dubai", "Rome", "Mumbai", "Tokyo", "Lima", "Santiago", "Mecca"],
+        "legs": [
+          {
+            "from": "Dubai",
+            "to": "Rome",
+            "distanceKm": 1609.9319861410295
+          },
+          {
+            "from": "Rome",
+            "to": "Mumbai",
+            "distanceKm": 1665.8091127136986
+          },
+          {
+            "from": "Mumbai",
+            "to": "Tokyo",
+            "distanceKm": 2115.5089222217903
+          },
+          {
+            "from": "Tokyo",
+            "to": "Lima",
+            "distanceKm": 9737.171303823303
+          },
+          {
+            "from": "Lima",
+            "to": "Santiago",
+            "distanceKm": 1597.2182067582376
+          },
+          {
+            "from": "Santiago",
+            "to": "Mecca",
+            "distanceKm": 312.5443968462721
+          }
+        ],
+        "transferCities": ["Rome", "Mumbai", "Tokyo", "Lima", "Santiago"],
+        "totalDistanceKm": 17038.183928504328,
+        "priceCents": 221496,
+        "display": {
+          "legs": ["1609.93", "1665.81", "2115.51", "9737.17", "1597.22", "312.54"],
+          "totalDistanceKm": "17038.18",
+          "priceUsd": "2214.96"
+        }
+      }
+    },
+    {
+      "id": "det-route-018",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Xi'an"
+      },
+      "tags": ["transfer", "apostrophe"],
+      "note": "Xi'an",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Hong Kong", "Buenos Aires", "Xi'an"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Hong Kong",
+            "distanceKm": 1717.8559310955038
+          },
+          {
+            "from": "Hong Kong",
+            "to": "Buenos Aires",
+            "distanceKm": 12501.6302936857
+          },
+          {
+            "from": "Buenos Aires",
+            "to": "Xi'an",
+            "distanceKm": 1074.661807267756
+          }
+        ],
+        "transferCities": ["Hong Kong", "Buenos Aires"],
+        "totalDistanceKm": 15294.148032048959,
+        "priceCents": 198824,
+        "display": {
+          "legs": ["1717.86", "12501.63", "1074.66"],
+          "totalDistanceKm": "15294.15",
+          "priceUsd": "1988.24"
+        }
+      }
+    },
+    {
+      "id": "det-route-019",
+      "fn": "quote",
+      "input": {
+        "from": "Guangzhou",
+        "to": "Shenzhen"
+      },
+      "tags": ["nonhub-nonhub", "multi-transfer"],
+      "note": "two spokes, 4 legs",
+      "expect": {
+        "ok": true,
+        "path": ["Guangzhou", "Frankfurt", "Delhi", "Toronto", "Shenzhen"],
+        "legs": [
+          {
+            "from": "Guangzhou",
+            "to": "Frankfurt",
+            "distanceKm": 1362.0811282739367
+          },
+          {
+            "from": "Frankfurt",
+            "to": "Delhi",
+            "distanceKm": 4634.731923207642
+          },
+          {
+            "from": "Delhi",
+            "to": "Toronto",
+            "distanceKm": 1699.3601737124475
+          },
+          {
+            "from": "Toronto",
+            "to": "Shenzhen",
+            "distanceKm": 1829.2635130018857
+          }
+        ],
+        "transferCities": ["Frankfurt", "Delhi", "Toronto"],
+        "totalDistanceKm": 9525.436738195911,
+        "priceCents": 123831,
+        "display": {
+          "legs": ["1362.08", "4634.73", "1699.36", "1829.26"],
+          "totalDistanceKm": "9525.44",
+          "priceUsd": "1238.31"
+        }
+      }
+    },
+    {
+      "id": "det-route-020",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "San Jose"
+      },
+      "tags": ["same-norm"],
+      "note": "price differs from 021",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Atlanta", "Tokyo", "San Jose"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Atlanta",
+            "distanceKm": 5040.015872990878
+          },
+          {
+            "from": "Atlanta",
+            "to": "Tokyo",
+            "distanceKm": 2115.0756487653107
+          },
+          {
+            "from": "Tokyo",
+            "to": "San Jose",
+            "distanceKm": 195.2434377898525
+          }
+        ],
+        "transferCities": ["Atlanta", "Tokyo"],
+        "totalDistanceKm": 7350.334959546041,
+        "priceCents": 95554,
+        "display": {
+          "legs": ["5040.02", "2115.08", "195.24"],
+          "totalDistanceKm": "7350.33",
+          "priceUsd": "955.54"
+        }
+      }
+    },
+    {
+      "id": "det-route-021",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "San José"
+      },
+      "tags": ["same-norm"],
+      "note": "price differs from 020",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Atlanta", "Tokyo", "San José"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Atlanta",
+            "distanceKm": 5040.015872990878
+          },
+          {
+            "from": "Atlanta",
+            "to": "Tokyo",
+            "distanceKm": 2115.0756487653107
+          },
+          {
+            "from": "Tokyo",
+            "to": "San José",
+            "distanceKm": 1969.2231971008264
+          }
+        ],
+        "transferCities": ["Atlanta", "Tokyo"],
+        "totalDistanceKm": 9124.314718857015,
+        "priceCents": 118616,
+        "display": {
+          "legs": ["5040.02", "2115.08", "1969.22"],
+          "totalDistanceKm": "9124.31",
+          "priceUsd": "1186.16"
+        }
+      }
+    },
+    {
+      "id": "det-route-022",
+      "fn": "quote",
+      "input": {
+        "from": "Jinan",
+        "to": "Adelaide"
+      },
+      "tags": ["near-tie"],
+      "note": "Jinan->London vs Jinan->Mumbai branches differ by ~0.0012 km on many routes; must NOT be treated as a tie (eps 1e-6)",
+      "expect": {
+        "ok": true,
+        "path": ["Jinan", "London", "Lagos", "New York", "Adelaide"],
+        "legs": [
+          {
+            "from": "Jinan",
+            "to": "London",
+            "distanceKm": 1868.311804812034
+          },
+          {
+            "from": "London",
+            "to": "Lagos",
+            "distanceKm": 1539.7675149190543
+          },
+          {
+            "from": "Lagos",
+            "to": "New York",
+            "distanceKm": 2233.841981877859
+          },
+          {
+            "from": "New York",
+            "to": "Adelaide",
+            "distanceKm": 798.2361805881766
+          }
+        ],
+        "transferCities": ["London", "Lagos", "New York"],
+        "totalDistanceKm": 6440.1574821971235,
+        "priceCents": 83722,
+        "display": {
+          "legs": ["1868.31", "1539.77", "2233.84", "798.24"],
+          "totalDistanceKm": "6440.16",
+          "priceUsd": "837.22"
+        }
+      }
+    },
+    {
+      "id": "det-route-023",
+      "fn": "quote",
+      "input": {
+        "from": "Alice Springs",
+        "to": "Charleston"
+      },
+      "tags": ["rounding"],
+      "note": "total*13 = ...216.49998: half-up on raw -> 138216; rounding the 2dp total first gives 138217 (wrong)",
+      "expect": {
+        "ok": true,
+        "path": ["Alice Springs", "Moscow", "Tokyo", "Sydney", "Toronto", "Charleston"],
+        "legs": [
+          {
+            "from": "Alice Springs",
+            "to": "Moscow",
+            "distanceKm": 1242.6829845137495
+          },
+          {
+            "from": "Moscow",
+            "to": "Tokyo",
+            "distanceKm": 2241.207263953961
+          },
+          {
+            "from": "Tokyo",
+            "to": "Sydney",
+            "distanceKm": 1627.066378486139
+          },
+          {
+            "from": "Sydney",
+            "to": "Toronto",
+            "distanceKm": 5135.593831291568
+          },
+          {
+            "from": "Toronto",
+            "to": "Charleston",
+            "distanceKm": 385.48800240733823
+          }
+        ],
+        "transferCities": ["Moscow", "Tokyo", "Sydney", "Toronto"],
+        "totalDistanceKm": 10632.038460652757,
+        "priceCents": 138216,
+        "display": {
+          "legs": ["1242.68", "2241.21", "1627.07", "5135.59", "385.49"],
+          "totalDistanceKm": "10632.04",
+          "priceUsd": "1382.16"
+        }
+      }
+    },
+    {
+      "id": "det-route-024",
+      "fn": "quote",
+      "input": {
+        "from": "Bern",
+        "to": "Stavanger"
+      },
+      "tags": ["rounding"],
+      "note": "total*13 = ...412.4999: raw -> 83412; from 2dp total -> 83413 (wrong)",
+      "expect": {
+        "ok": true,
+        "path": ["Bern", "Atlanta", "Mexico City", "Los Angeles", "Stavanger"],
+        "legs": [
+          {
+            "from": "Bern",
+            "to": "Atlanta",
+            "distanceKm": 801.3301441977583
+          },
+          {
+            "from": "Atlanta",
+            "to": "Mexico City",
+            "distanceKm": 2714.927991678601
+          },
+          {
+            "from": "Mexico City",
+            "to": "Los Angeles",
+            "distanceKm": 2404.148497909395
+          },
+          {
+            "from": "Los Angeles",
+            "to": "Stavanger",
+            "distanceKm": 495.9395124407814
+          }
+        ],
+        "transferCities": ["Atlanta", "Mexico City", "Los Angeles"],
+        "totalDistanceKm": 6416.346146226535,
+        "priceCents": 83412,
+        "display": {
+          "legs": ["801.33", "2714.93", "2404.15", "495.94"],
+          "totalDistanceKm": "6416.35",
+          "priceUsd": "834.12"
+        }
+      }
+    },
+    {
+      "id": "det-route-025",
+      "fn": "quote",
+      "input": {
+        "from": "Aalborg",
+        "to": "Aqaba"
+      },
+      "tags": ["rounding"],
+      "note": "total*13 = ...493.5027 -> 143494; from 2dp total -> 143493 (wrong)",
+      "expect": {
+        "ok": true,
+        "path": ["Aalborg", "Nairobi", "Rome", "São Paulo", "Aqaba"],
+        "legs": [
+          {
+            "from": "Aalborg",
+            "to": "Nairobi",
+            "distanceKm": 820.9567589099928
+          },
+          {
+            "from": "Nairobi",
+            "to": "Rome",
+            "distanceKm": 7644.12663422055
+          },
+          {
+            "from": "Rome",
+            "to": "São Paulo",
+            "distanceKm": 2057.245731554692
+          },
+          {
+            "from": "São Paulo",
+            "to": "Aqaba",
+            "distanceKm": 515.6326211557993
+          }
+        ],
+        "transferCities": ["Nairobi", "Rome", "São Paulo"],
+        "totalDistanceKm": 11037.961745841034,
+        "priceCents": 143494,
+        "display": {
+          "legs": ["820.96", "7644.13", "2057.25", "515.63"],
+          "totalDistanceKm": "11037.96",
+          "priceUsd": "1434.94"
+        }
+      }
+    },
+    {
+      "id": "det-route-026",
+      "fn": "quote",
+      "input": {
+        "from": "Agadir",
+        "to": "Indianapolis"
+      },
+      "tags": ["rounding"],
+      "note": "total*13 = ...156.50008 -> 35157",
+      "expect": {
+        "ok": true,
+        "path": ["Agadir", "Miami", "Indianapolis"],
+        "legs": [
+          {
+            "from": "Agadir",
+            "to": "Miami",
+            "distanceKm": 940.9718380483021
+          },
+          {
+            "from": "Miami",
+            "to": "Indianapolis",
+            "distanceKm": 1763.374322144904
+          }
+        ],
+        "transferCities": ["Miami"],
+        "totalDistanceKm": 2704.346160193206,
+        "priceCents": 35157,
+        "display": {
+          "legs": ["940.97", "1763.37"],
+          "totalDistanceKm": "2704.35",
+          "priceUsd": "351.57"
+        }
+      }
+    },
+    {
+      "id": "det-route-027",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Aalborg"
+      },
+      "tags": ["display-sum"],
+      "note": "sum of 2dp legs (10800.36) != 2dp total (10800.35); card must footnote",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Atlanta", "Nairobi", "Aalborg"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Atlanta",
+            "distanceKm": 5040.015872990878
+          },
+          {
+            "from": "Atlanta",
+            "to": "Nairobi",
+            "distanceKm": 4939.376985005295
+          },
+          {
+            "from": "Nairobi",
+            "to": "Aalborg",
+            "distanceKm": 820.9567589099928
+          }
+        ],
+        "transferCities": ["Atlanta", "Nairobi"],
+        "totalDistanceKm": 10800.349616906165,
+        "priceCents": 140405,
+        "display": {
+          "legs": ["5040.02", "4939.38", "820.96"],
+          "totalDistanceKm": "10800.35",
+          "priceUsd": "1404.05"
+        }
+      }
+    },
+    {
+      "id": "det-route-028",
+      "fn": "quote",
+      "input": {
+        "from": "Hong Kong",
+        "to": "Bogotá"
+      },
+      "tags": ["hub-hub", "non-ascii"],
+      "note": "Bogotá is a hub",
+      "expect": {
+        "ok": true,
+        "path": ["Hong Kong", "Lagos", "Atlanta", "Bogotá"],
+        "legs": [
+          {
+            "from": "Hong Kong",
+            "to": "Lagos",
+            "distanceKm": 2819.1353284296233
+          },
+          {
+            "from": "Lagos",
+            "to": "Atlanta",
+            "distanceKm": 2136.380350031333
+          },
+          {
+            "from": "Atlanta",
+            "to": "Bogotá",
+            "distanceKm": 8835.329592041262
+          }
+        ],
+        "transferCities": ["Lagos", "Atlanta"],
+        "totalDistanceKm": 13790.845270502217,
+        "priceCents": 179281,
+        "display": {
+          "legs": ["2819.14", "2136.38", "8835.33"],
+          "totalDistanceKm": "13790.85",
+          "priceUsd": "1792.81"
+        }
+      }
+    },
+    {
+      "id": "det-route-029",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Kyiv"
+      },
+      "tags": ["transfer"],
+      "note": "Kyiv (not Kiev)",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Singapore", "Kyiv"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Singapore",
+            "distanceKm": 14777.226837265509
+          },
+          {
+            "from": "Singapore",
+            "to": "Kyiv",
+            "distanceKm": 421.4356415871823
+          }
+        ],
+        "transferCities": ["Singapore"],
+        "totalDistanceKm": 15198.662478852691,
+        "priceCents": 197583,
+        "display": {
+          "legs": ["14777.23", "421.44"],
+          "totalDistanceKm": "15198.66",
+          "priceUsd": "1975.83"
+        }
+      }
+    },
+    {
+      "id": "det-route-030",
+      "fn": "quote",
+      "input": {
+        "from": "Beijing",
+        "to": "Saint Petersburg"
+      },
+      "tags": ["multi-transfer"],
+      "note": "'St. Petersburg' is NOT a db name",
+      "expect": {
+        "ok": true,
+        "path": ["Beijing", "Delhi", "Amsterdam", "Lima", "Saint Petersburg"],
+        "legs": [
+          {
+            "from": "Beijing",
+            "to": "Delhi",
+            "distanceKm": 1505.9219767305344
+          },
+          {
+            "from": "Delhi",
+            "to": "Amsterdam",
+            "distanceKm": 3939.1837987075446
+          },
+          {
+            "from": "Amsterdam",
+            "to": "Lima",
+            "distanceKm": 1596.9934251586635
+          },
+          {
+            "from": "Lima",
+            "to": "Saint Petersburg",
+            "distanceKm": 732.5407838475617
+          }
+        ],
+        "transferCities": ["Delhi", "Amsterdam", "Lima"],
+        "totalDistanceKm": 7774.639984444304,
+        "priceCents": 101070,
+        "display": {
+          "legs": ["1505.92", "3939.18", "1596.99", "732.54"],
+          "totalDistanceKm": "7774.64",
+          "priceUsd": "1010.70"
+        }
+      }
+    },
+    {
+      "id": "det-route-031",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Tirana"
+      },
+      "tags": ["nearest-of-unserved"],
+      "note": "Abu Dhabi's nearest served",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Atlanta", "Nairobi", "Toronto", "Tirana"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Atlanta",
+            "distanceKm": 5040.015872990878
+          },
+          {
+            "from": "Atlanta",
+            "to": "Nairobi",
+            "distanceKm": 4939.376985005295
+          },
+          {
+            "from": "Nairobi",
+            "to": "Toronto",
+            "distanceKm": 2723.6352545816408
+          },
+          {
+            "from": "Toronto",
+            "to": "Tirana",
+            "distanceKm": 724.0338389882064
+          }
+        ],
+        "transferCities": ["Atlanta", "Nairobi", "Toronto"],
+        "totalDistanceKm": 13427.06195156602,
+        "priceCents": 174552,
+        "display": {
+          "legs": ["5040.02", "4939.38", "2723.64", "724.03"],
+          "totalDistanceKm": "13427.06",
+          "priceUsd": "1745.52"
+        }
+      }
+    },
+    {
+      "id": "det-route-032",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Gyumri"
+      },
+      "tags": ["nearest-of-unserved"],
+      "note": "Savannah's nearest served",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Hong Kong", "Gyumri"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Hong Kong",
+            "distanceKm": 1717.8559310955038
+          },
+          {
+            "from": "Hong Kong",
+            "to": "Gyumri",
+            "distanceKm": 1497.6581719471235
+          }
+        ],
+        "transferCities": ["Hong Kong"],
+        "totalDistanceKm": 3215.5141030426275,
+        "priceCents": 41802,
+        "display": {
+          "legs": ["1717.86", "1497.66"],
+          "totalDistanceKm": "3215.51",
+          "priceUsd": "418.02"
+        }
+      }
+    },
+    {
+      "id": "det-route-033",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Shanghai"
+      },
+      "tags": ["error"],
+      "note": "SAME_CITY",
+      "expect": {
+        "ok": false,
+        "code": "SAME_CITY"
+      }
+    },
+    {
+      "id": "det-route-034",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Austin"
+      },
+      "tags": ["error", "unserved"],
+      "note": "CITY_NOT_SERVED carries nearestServed",
+      "expect": {
+        "ok": false,
+        "code": "CITY_NOT_SERVED",
+        "data": {
+          "city": "Austin",
+          "nearestServed": {
+            "city": "Copenhagen",
+            "distanceKm": "120.95"
+          }
+        }
+      }
+    },
+    {
+      "id": "det-route-035",
+      "fn": "quote",
+      "input": {
+        "from": "Stuttgart",
+        "to": "Shanghai"
+      },
+      "tags": ["error", "unserved"],
+      "note": "unserved as origin",
+      "expect": {
+        "ok": false,
+        "code": "CITY_NOT_SERVED",
+        "data": {
+          "city": "Stuttgart",
+          "nearestServed": {
+            "city": "Novi Sad",
+            "distanceKm": "175.14"
+          }
+        }
+      }
+    },
+    {
+      "id": "det-route-036",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Atlantis"
+      },
+      "tags": ["error"],
+      "note": "CITY_NOT_FOUND (not in db)",
+      "expect": {
+        "ok": false,
+        "code": "CITY_NOT_FOUND"
+      }
+    },
+    {
+      "id": "det-route-101",
+      "fn": "quote",
+      "input": {
+        "from": "Beijing",
+        "to": "Tokyo"
+      },
+      "tags": ["agent-ref"],
+      "note": "referenced by eval/cases/agent",
+      "expect": {
+        "ok": true,
+        "path": ["Beijing", "Delhi", "Tokyo"],
+        "legs": [
+          {
+            "from": "Beijing",
+            "to": "Delhi",
+            "distanceKm": 1505.9219767305344
+          },
+          {
+            "from": "Delhi",
+            "to": "Tokyo",
+            "distanceKm": 7510.170836938398
+          }
+        ],
+        "transferCities": ["Delhi"],
+        "totalDistanceKm": 9016.092813668933,
+        "priceCents": 117209,
+        "display": {
+          "legs": ["1505.92", "7510.17"],
+          "totalDistanceKm": "9016.09",
+          "priceUsd": "1172.09"
+        }
+      }
+    },
+    {
+      "id": "det-route-102",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Novi Sad"
+      },
+      "tags": ["agent-ref"],
+      "note": "referenced by eval/cases/agent",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Dallas", "New York", "Paris", "Beijing", "Johannesburg", "Novi Sad"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Dallas",
+            "distanceKm": 1761.2509758691406
+          },
+          {
+            "from": "Dallas",
+            "to": "New York",
+            "distanceKm": 2040.9473290606986
+          },
+          {
+            "from": "New York",
+            "to": "Paris",
+            "distanceKm": 7863.191781967422
+          },
+          {
+            "from": "Paris",
+            "to": "Beijing",
+            "distanceKm": 2259.331759613891
+          },
+          {
+            "from": "Beijing",
+            "to": "Johannesburg",
+            "distanceKm": 3628.0117144243072
+          },
+          {
+            "from": "Johannesburg",
+            "to": "Novi Sad",
+            "distanceKm": 1190.8358409117523
+          }
+        ],
+        "transferCities": ["Dallas", "New York", "Paris", "Beijing", "Johannesburg"],
+        "totalDistanceKm": 18743.569401847213,
+        "priceCents": 243666,
+        "display": {
+          "legs": ["1761.25", "2040.95", "7863.19", "2259.33", "3628.01", "1190.84"],
+          "totalDistanceKm": "18743.57",
+          "priceUsd": "2436.66"
+        }
+      }
+    },
+    {
+      "id": "det-route-103",
+      "fn": "quote",
+      "input": {
+        "from": "Novi Sad",
+        "to": "Shanghai"
+      },
+      "tags": ["agent-ref"],
+      "note": "referenced by eval/cases/agent",
+      "expect": {
+        "ok": true,
+        "path": ["Novi Sad", "Johannesburg", "Beijing", "Paris", "New York", "Dallas", "Shanghai"],
+        "legs": [
+          {
+            "from": "Novi Sad",
+            "to": "Johannesburg",
+            "distanceKm": 1190.8358409117523
+          },
+          {
+            "from": "Johannesburg",
+            "to": "Beijing",
+            "distanceKm": 3628.0117144243072
+          },
+          {
+            "from": "Beijing",
+            "to": "Paris",
+            "distanceKm": 2259.331759613891
+          },
+          {
+            "from": "Paris",
+            "to": "New York",
+            "distanceKm": 7863.191781967422
+          },
+          {
+            "from": "New York",
+            "to": "Dallas",
+            "distanceKm": 2040.9473290606986
+          },
+          {
+            "from": "Dallas",
+            "to": "Shanghai",
+            "distanceKm": 1761.2509758691406
+          }
+        ],
+        "transferCities": ["Johannesburg", "Beijing", "Paris", "New York", "Dallas"],
+        "totalDistanceKm": 18743.569401847213,
+        "priceCents": 243666,
+        "display": {
+          "legs": ["1190.84", "3628.01", "2259.33", "7863.19", "2040.95", "1761.25"],
+          "totalDistanceKm": "18743.57",
+          "priceUsd": "2436.66"
+        }
+      }
+    },
+    {
+      "id": "det-route-104",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Edmonton"
+      },
+      "tags": ["agent-ref"],
+      "note": "referenced by eval/cases/agent",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Hong Kong", "São Paulo", "Rome", "Edmonton"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Hong Kong",
+            "distanceKm": 1717.8559310955038
+          },
+          {
+            "from": "Hong Kong",
+            "to": "São Paulo",
+            "distanceKm": 1542.0693888408523
+          },
+          {
+            "from": "São Paulo",
+            "to": "Rome",
+            "distanceKm": 2057.245731554692
+          },
+          {
+            "from": "Rome",
+            "to": "Edmonton",
+            "distanceKm": 546.6488818245218
+          }
+        ],
+        "transferCities": ["Hong Kong", "São Paulo", "Rome"],
+        "totalDistanceKm": 5863.81993331557,
+        "priceCents": 76230,
+        "display": {
+          "legs": ["1717.86", "1542.07", "2057.25", "546.65"],
+          "totalDistanceKm": "5863.82",
+          "priceUsd": "762.30"
+        }
+      }
+    },
+    {
+      "id": "det-route-105",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Ottawa"
+      },
+      "tags": ["agent-ref"],
+      "note": "referenced by eval/cases/agent",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Singapore", "Ottawa"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Singapore",
+            "distanceKm": 14777.226837265509
+          },
+          {
+            "from": "Singapore",
+            "to": "Ottawa",
+            "distanceKm": 1210.1475116695485
+          }
+        ],
+        "transferCities": ["Singapore"],
+        "totalDistanceKm": 15987.374348935058,
+        "priceCents": 207836,
+        "display": {
+          "legs": ["14777.23", "1210.15"],
+          "totalDistanceKm": "15987.37",
+          "priceUsd": "2078.36"
+        }
+      }
+    },
+    {
+      "id": "det-route-106",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Xiamen"
+      },
+      "tags": ["agent-ref"],
+      "note": "referenced by eval/cases/agent",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Atlanta", "Bogotá", "Santiago", "Seoul", "Xiamen"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Atlanta",
+            "distanceKm": 5040.015872990878
+          },
+          {
+            "from": "Atlanta",
+            "to": "Bogotá",
+            "distanceKm": 8835.329592041262
+          },
+          {
+            "from": "Bogotá",
+            "to": "Santiago",
+            "distanceKm": 3796.6523412079755
+          },
+          {
+            "from": "Santiago",
+            "to": "Seoul",
+            "distanceKm": 1545.8088497611857
+          },
+          {
+            "from": "Seoul",
+            "to": "Xiamen",
+            "distanceKm": 1684.5690843654943
+          }
+        ],
+        "transferCities": ["Atlanta", "Bogotá", "Santiago", "Seoul"],
+        "totalDistanceKm": 20902.3757403668,
+        "priceCents": 271731,
+        "display": {
+          "legs": ["5040.02", "8835.33", "3796.65", "1545.81", "1684.57"],
+          "totalDistanceKm": "20902.38",
+          "priceUsd": "2717.31"
+        }
+      }
+    },
+    {
+      "id": "det-route-107",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Basra"
+      },
+      "tags": ["agent-ref"],
+      "note": "referenced by eval/cases/agent",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Atlanta", "Amsterdam", "Basra"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Atlanta",
+            "distanceKm": 5040.015872990878
+          },
+          {
+            "from": "Atlanta",
+            "to": "Amsterdam",
+            "distanceKm": 11229.085804285227
+          },
+          {
+            "from": "Amsterdam",
+            "to": "Basra",
+            "distanceKm": 1217.7951387651374
+          }
+        ],
+        "transferCities": ["Atlanta", "Amsterdam"],
+        "totalDistanceKm": 17486.89681604124,
+        "priceCents": 227330,
+        "display": {
+          "legs": ["5040.02", "11229.09", "1217.80"],
+          "totalDistanceKm": "17486.90",
+          "priceUsd": "2273.30"
+        }
+      }
+    },
+    {
+      "id": "det-route-108",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Hartford"
+      },
+      "tags": ["agent-ref"],
+      "note": "referenced by eval/cases/agent",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Dallas", "New York", "Los Angeles", "Honolulu", "Hartford"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Dallas",
+            "distanceKm": 1761.2509758691406
+          },
+          {
+            "from": "Dallas",
+            "to": "New York",
+            "distanceKm": 2040.9473290606986
+          },
+          {
+            "from": "New York",
+            "to": "Los Angeles",
+            "distanceKm": 2384.5077060055814
+          },
+          {
+            "from": "Los Angeles",
+            "to": "Honolulu",
+            "distanceKm": 4470.982554204389
+          },
+          {
+            "from": "Honolulu",
+            "to": "Hartford",
+            "distanceKm": 1645.6430354119937
+          }
+        ],
+        "transferCities": ["Dallas", "New York", "Los Angeles", "Honolulu"],
+        "totalDistanceKm": 12303.331600551803,
+        "priceCents": 159943,
+        "display": {
+          "legs": ["1761.25", "2040.95", "2384.51", "4470.98", "1645.64"],
+          "totalDistanceKm": "12303.33",
+          "priceUsd": "1599.43"
+        }
+      }
+    },
+    {
+      "id": "det-route-037",
+      "fn": "quote",
+      "input": {
+        "from": "shanghai",
+        "to": "Tokyo"
+      },
+      "tags": ["canonical-only"],
+      "note": "lowercase is not canonical -> CITY_NOT_FOUND (resolve first)",
+      "expect": {
+        "ok": false,
+        "code": "CITY_NOT_FOUND"
+      }
+    },
+    {
+      "id": "det-route-038",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Sao Paulo"
+      },
+      "tags": ["canonical-only"],
+      "note": "accent-stripped is not canonical -> CITY_NOT_FOUND",
+      "expect": {
+        "ok": false,
+        "code": "CITY_NOT_FOUND"
+      }
+    },
+    {
+      "id": "det-route-039",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "Tromso"
+      },
+      "tags": ["canonical-only"],
+      "note": "transliterated is not canonical -> CITY_NOT_FOUND",
+      "expect": {
+        "ok": false,
+        "code": "CITY_NOT_FOUND"
+      }
+    },
+    {
+      "id": "det-route-040",
+      "fn": "quote",
+      "input": {
+        "from": "Shanghai",
+        "to": "São Paulo"
+      },
+      "tags": ["canonical-only"],
+      "note": "NFD 'São Paulo' -> NFC equal -> OK (only NFC is applied)",
+      "expect": {
+        "ok": true,
+        "path": ["Shanghai", "Hong Kong", "São Paulo"],
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Hong Kong",
+            "distanceKm": 1717.8559310955038
+          },
+          {
+            "from": "Hong Kong",
+            "to": "São Paulo",
+            "distanceKm": 1542.0693888408523
+          }
+        ],
+        "transferCities": ["Hong Kong"],
+        "totalDistanceKm": 3259.925319936356,
+        "priceCents": 42379,
+        "display": {
+          "legs": ["1717.86", "1542.07"],
+          "totalDistanceKm": "3259.93",
+          "priceUsd": "423.79"
+        }
+      }
+    },
+    {
+      "id": "det-route-041",
+      "fn": "quote",
+      "input": {
+        "from": "Aberdeen",
+        "to": "Debrecen"
+      },
+      "tags": ["max-legs"],
+      "note": "8 legs is the maximum leg count over all 490,700 ordered served pairs (204 pairs)",
+      "expect": {
+        "ok": true,
+        "path": [
+          "Aberdeen",
+          "Istanbul",
+          "Cairo",
+          "Delhi",
+          "Mexico City",
+          "Los Angeles",
+          "New York",
+          "Dallas",
+          "Debrecen"
+        ],
+        "legs": [
+          {
+            "from": "Aberdeen",
+            "to": "Istanbul",
+            "distanceKm": 648.4442921331022
+          },
+          {
+            "from": "Istanbul",
+            "to": "Cairo",
+            "distanceKm": 1630.1490729378095
+          },
+          {
+            "from": "Cairo",
+            "to": "Delhi",
+            "distanceKm": 1963.6000101853738
+          },
+          {
+            "from": "Delhi",
+            "to": "Mexico City",
+            "distanceKm": 6049.8589239750045
+          },
+          {
+            "from": "Mexico City",
+            "to": "Los Angeles",
+            "distanceKm": 2404.148497909395
+          },
+          {
+            "from": "Los Angeles",
+            "to": "New York",
+            "distanceKm": 2384.5077060055814
+          },
+          {
+            "from": "New York",
+            "to": "Dallas",
+            "distanceKm": 2040.9473290606986
+          },
+          {
+            "from": "Dallas",
+            "to": "Debrecen",
+            "distanceKm": 1099.5931065626048
+          }
+        ],
+        "transferCities": ["Istanbul", "Cairo", "Delhi", "Mexico City", "Los Angeles", "New York", "Dallas"],
+        "totalDistanceKm": 18221.24893876957,
+        "priceCents": 236876,
+        "display": {
+          "legs": ["648.44", "1630.15", "1963.60", "6049.86", "2404.15", "2384.51", "2040.95", "1099.59"],
+          "totalDistanceKm": "18221.25",
+          "priceUsd": "2368.76"
+        }
+      }
+    },
+    {
+      "id": "det-norm-001",
+      "fn": "norm",
+      "input": "São Paulo",
+      "note": null,
+      "expect": "sao paulo"
+    },
+    {
+      "id": "det-norm-002",
+      "fn": "norm",
+      "input": "SAO PAULO",
+      "note": null,
+      "expect": "sao paulo"
+    },
+    {
+      "id": "det-norm-003",
+      "fn": "norm",
+      "input": "ＳＡＯ　ＰＡＵＬＯ",
+      "note": "full-width letters + ideographic space",
+      "expect": "sao paulo"
+    },
+    {
+      "id": "det-norm-004",
+      "fn": "norm",
+      "input": "S​ão Pa‍ulo",
+      "note": "zero-width chars",
+      "expect": "sao paulo"
+    },
+    {
+      "id": "det-norm-005",
+      "fn": "norm",
+      "input": "Tromsø",
+      "note": "ø not decomposable by NFKD",
+      "expect": "tromso"
+    },
+    {
+      "id": "det-norm-006",
+      "fn": "norm",
+      "input": "Wrocław",
+      "note": "ł",
+      "expect": "wroclaw"
+    },
+    {
+      "id": "det-norm-007",
+      "fn": "norm",
+      "input": "Xi'an",
+      "note": "apostrophe removed",
+      "expect": "xian"
+    },
+    {
+      "id": "det-norm-008",
+      "fn": "norm",
+      "input": "xi an",
+      "note": "space kept -> differs from 'xian'!",
+      "expect": "xi an"
+    },
+    {
+      "id": "det-norm-009",
+      "fn": "norm",
+      "input": "St. John's",
+      "note": null,
+      "expect": "st johns"
+    },
+    {
+      "id": "det-norm-010",
+      "fn": "norm",
+      "input": "Washington, D.C.",
+      "note": null,
+      "expect": "washington dc"
+    },
+    {
+      "id": "det-norm-011",
+      "fn": "norm",
+      "input": "Zürich",
+      "note": null,
+      "expect": "zurich"
+    },
+    {
+      "id": "det-norm-012",
+      "fn": "norm",
+      "input": "Hagåtña",
+      "note": null,
+      "expect": "hagatna"
+    },
+    {
+      "id": "det-norm-013",
+      "fn": "norm",
+      "input": "Timișoara",
+      "note": "s-comma below",
+      "expect": "timisoara"
+    },
+    {
+      "id": "det-norm-014",
+      "fn": "norm",
+      "input": "Pointe-à-Pitre",
+      "note": "hyphens -> spaces",
+      "expect": "pointe a pitre"
+    },
+    {
+      "id": "det-norm-015",
+      "fn": "norm",
+      "input": "N'Djamena",
+      "note": null,
+      "expect": "ndjamena"
+    },
+    {
+      "id": "det-norm-016",
+      "fn": "norm",
+      "input": "San José",
+      "note": null,
+      "expect": "san jose"
+    },
+    {
+      "id": "det-norm-017",
+      "fn": "norm",
+      "input": "Nuku’alofa",
+      "note": "U+2019 apostrophe",
+      "expect": "nukualofa"
+    },
+    {
+      "id": "det-norm-018",
+      "fn": "norm",
+      "input": "Malmö",
+      "note": null,
+      "expect": "malmo"
+    },
+    {
+      "id": "det-norm-019",
+      "fn": "norm",
+      "input": "Straße",
+      "note": "ß -> ss (not a db city; norm unit only)",
+      "expect": "strasse"
+    },
+    {
+      "id": "det-norm-020",
+      "fn": "norm",
+      "input": "Þórshöfn",
+      "note": "Þ -> th",
+      "expect": "thorshofn"
+    },
+    {
+      "id": "det-norm-021",
+      "fn": "normCollisions",
+      "input": "all 711 city_name",
+      "note": "CI must assert the collision set is exactly this",
+      "expect": ["San Jose", "San José"]
+    },
+    {
+      "id": "det-norm-022",
+      "fn": "allAsciiAfterNorm",
+      "input": "all 711 city_name",
+      "expect": true
+    },
+    {
+      "id": "det-resolve-001",
+      "fn": "resolve_city",
+      "input": {
+        "original": "Sao Paulo",
+        "candidates": ["Sao Paulo"]
+      },
+      "note": "accent stripped -> exact",
+      "expect": {
+        "status": "exact",
+        "matches": [
+          {
+            "city": "São Paulo",
+            "isHub": true,
+            "served": true,
+            "connectedHubs": [],
+            "nearestServed": null
+          }
+        ],
+        "matchedBy": {
+          "source": "candidate",
+          "index": 0
+        }
+      }
+    },
+    {
+      "id": "det-resolve-002",
+      "fn": "resolve_city",
+      "input": {
+        "original": "上海",
+        "candidates": ["Shanghai"]
+      },
+      "note": "zh original, en candidate",
+      "expect": {
+        "status": "exact",
+        "matches": [
+          {
+            "city": "Shanghai",
+            "isHub": true,
+            "served": true,
+            "connectedHubs": [],
+            "nearestServed": null
+          }
+        ],
+        "matchedBy": {
+          "source": "candidate",
+          "index": 0
+        }
+      }
+    },
+    {
+      "id": "det-resolve-003",
+      "fn": "resolve_city",
+      "input": {
+        "original": "圣保罗",
+        "candidates": ["Sao Paulo", "São Paulo"]
+      },
+      "note": "first candidate already exact",
+      "expect": {
+        "status": "exact",
+        "matches": [
+          {
+            "city": "São Paulo",
+            "isHub": true,
+            "served": true,
+            "connectedHubs": [],
+            "nearestServed": null
+          }
+        ],
+        "matchedBy": {
+          "source": "candidate",
+          "index": 0
+        }
+      }
+    },
+    {
+      "id": "det-resolve-004",
+      "fn": "resolve_city",
+      "input": {
+        "original": "苏黎世",
+        "candidates": ["Zurich"]
+      },
+      "note": "Zürich via norm",
+      "expect": {
+        "status": "exact",
+        "matches": [
+          {
+            "city": "Zürich",
+            "isHub": false,
+            "served": true,
+            "connectedHubs": ["Lagos", "London"],
+            "nearestServed": null
+          }
+        ],
+        "matchedBy": {
+          "source": "candidate",
+          "index": 0
+        }
+      }
+    },
+    {
+      "id": "det-resolve-005",
+      "fn": "resolve_city",
+      "input": {
+        "original": "特罗姆瑟",
+        "candidates": ["Tromso"]
+      },
+      "note": "Tromsø via translit",
+      "expect": {
+        "status": "exact",
+        "matches": [
+          {
+            "city": "Tromsø",
+            "isHub": false,
+            "served": true,
+            "connectedHubs": ["Johannesburg", "Frankfurt"],
+            "nearestServed": null
+          }
+        ],
+        "matchedBy": {
+          "source": "candidate",
+          "index": 0
+        }
+      }
+    },
+    {
+      "id": "det-resolve-006",
+      "fn": "resolve_city",
+      "input": {
+        "original": "弗罗茨瓦夫",
+        "candidates": ["Wroclaw"]
+      },
+      "note": "Wrocław via translit",
+      "expect": {
+        "status": "exact",
+        "matches": [
+          {
+            "city": "Wrocław",
+            "isHub": false,
+            "served": true,
+            "connectedHubs": ["Shanghai"],
+            "nearestServed": null
+          }
+        ],
+        "matchedBy": {
+          "source": "candidate",
+          "index": 0
+        }
+      }
+    },
+    {
+      "id": "det-resolve-007",
+      "fn": "resolve_city",
+      "input": {
+        "original": "西安",
+        "candidates": ["Xian", "Xi'an"]
+      },
+      "note": "'Xian' norm 'xian' == norm(\"Xi'an\") -> exact on index 0",
+      "expect": {
+        "status": "exact",
+        "matches": [
+          {
+            "city": "Xi'an",
+            "isHub": false,
+            "served": true,
+            "connectedHubs": ["Doha", "Buenos Aires"],
+            "nearestServed": null
+          }
+        ],
+        "matchedBy": {
+          "source": "candidate",
+          "index": 0
+        }
+      }
+    },
+    {
+      "id": "det-resolve-008",
+      "fn": "resolve_city",
+      "input": {
+        "original": "xi an",
+        "candidates": ["xi an"]
+      },
+      "note": "'xi an' != 'xian' -> NOT exact; fuzzy",
+      "expect": {
+        "status": "suggest",
+        "matches": [
+          {
+            "city": "Xi'an",
+            "score": 0.8
+          }
+        ],
+        "matchedBy": {
+          "source": "fuzzy"
+        }
+      }
+    },
+    {
+      "id": "det-resolve-009",
+      "fn": "resolve_city",
+      "input": {
+        "original": "圣何塞",
+        "candidates": ["San Jose"]
+      },
+      "note": "ambiguous: San Jose + San José",
+      "expect": {
+        "status": "ambiguous",
+        "matches": [
+          {
+            "city": "San Jose",
+            "isHub": false,
+            "served": true,
+            "connectedHubs": ["Tokyo"],
+            "nearestServed": null
+          },
+          {
+            "city": "San José",
+            "isHub": false,
+            "served": true,
+            "connectedHubs": ["Sydney", "Tokyo"],
+            "nearestServed": null
+          }
+        ],
+        "matchedBy": {
+          "source": "candidate",
+          "index": 0
+        }
+      }
+    },
+    {
+      "id": "det-resolve-010",
+      "fn": "resolve_city",
+      "input": {
+        "original": "San José",
+        "candidates": ["San José"]
+      },
+      "note": "ambiguous even when candidate spelling matches one exactly",
+      "expect": {
+        "status": "ambiguous",
+        "matches": [
+          {
+            "city": "San Jose",
+            "isHub": false,
+            "served": true,
+            "connectedHubs": ["Tokyo"],
+            "nearestServed": null
+          },
+          {
+            "city": "San José",
+            "isHub": false,
+            "served": true,
+            "connectedHubs": ["Sydney", "Tokyo"],
+            "nearestServed": null
+          }
+        ],
+        "matchedBy": {
+          "source": "candidate",
+          "index": 0
+        }
+      }
+    },
+    {
+      "id": "det-resolve-011",
+      "fn": "resolve_city",
+      "input": {
+        "original": "Washington DC",
+        "candidates": ["Washington DC"]
+      },
+      "note": "exact Washington, D.C.",
+      "expect": {
+        "status": "exact",
+        "matches": [
+          {
+            "city": "Washington, D.C.",
+            "isHub": false,
+            "served": true,
+            "connectedHubs": ["Sydney", "Tokyo"],
+            "nearestServed": null
+          }
+        ],
+        "matchedBy": {
+          "source": "candidate",
+          "index": 0
+        }
+      }
+    },
+    {
+      "id": "det-resolve-012",
+      "fn": "resolve_city",
+      "input": {
+        "original": "St Johns",
+        "candidates": ["St Johns"]
+      },
+      "note": "exact St. John's",
+      "expect": {
+        "status": "exact",
+        "matches": [
+          {
+            "city": "St. John's",
+            "isHub": false,
+            "served": true,
+            "connectedHubs": ["Los Angeles"],
+            "nearestServed": null
+          }
+        ],
+        "matchedBy": {
+          "source": "candidate",
+          "index": 0
+        }
+      }
+    },
+    {
+      "id": "det-resolve-013",
+      "fn": "resolve_city",
+      "input": {
+        "original": "Kraków",
+        "candidates": ["Kraków"]
+      },
+      "note": "db spells 'Krakow' (ASCII) -> exact",
+      "expect": {
+        "status": "exact",
+        "matches": [
+          {
+            "city": "Krakow",
+            "isHub": false,
+            "served": true,
+            "connectedHubs": ["Nairobi", "Toronto"],
+            "nearestServed": null
+          }
+        ],
+        "matchedBy": {
+          "source": "candidate",
+          "index": 0
+        }
+      }
+    },
+    {
+      "id": "det-resolve-014",
+      "fn": "resolve_city",
+      "input": {
+        "original": "Gdańsk",
+        "candidates": ["Gdańsk"]
+      },
+      "note": "db spells 'Gdansk' -> exact",
+      "expect": {
+        "status": "exact",
+        "matches": [
+          {
+            "city": "Gdansk",
+            "isHub": false,
+            "served": true,
+            "connectedHubs": ["Madrid", "Istanbul"],
+            "nearestServed": null
+          }
+        ],
+        "matchedBy": {
+          "source": "candidate",
+          "index": 0
+        }
+      }
+    },
+    {
+      "id": "det-resolve-015",
+      "fn": "resolve_city",
+      "input": {
+        "original": "Kiev",
+        "candidates": ["Kiev"]
+      },
+      "note": "db has Kyiv only; DL(kiev,kyiv)=2 > 1 -> not_found unless LLM offers Kyiv",
+      "expect": {
+        "status": "not_found",
+        "matches": []
+      }
+    },
+    {
+      "id": "det-resolve-016",
+      "fn": "resolve_city",
+      "input": {
+        "original": "基辅",
+        "candidates": ["Kiev", "Kyiv"]
+      },
+      "note": "second candidate exact must win over first candidate's fuzzy",
+      "expect": {
+        "status": "exact",
+        "matches": [
+          {
+            "city": "Kyiv",
+            "isHub": false,
+            "served": true,
+            "connectedHubs": ["Singapore", "Frankfurt"],
+            "nearestServed": null
+          }
+        ],
+        "matchedBy": {
+          "source": "candidate",
+          "index": 1
+        }
+      }
+    },
+    {
+      "id": "det-resolve-017",
+      "fn": "resolve_city",
+      "input": {
+        "original": "Zuerich",
+        "candidates": ["Zuerich"]
+      },
+      "note": "ue-spelling is not in translit table -> suggest 0.857 -> ask",
+      "expect": {
+        "status": "suggest",
+        "matches": [
+          {
+            "city": "Zürich",
+            "score": 0.8571
+          }
+        ],
+        "matchedBy": {
+          "source": "fuzzy"
+        }
+      }
+    },
+    {
+      "id": "det-resolve-018",
+      "fn": "resolve_city",
+      "input": {
+        "original": "Shangai",
+        "candidates": ["Shangai"]
+      },
+      "note": "typo -> single suggest 0.875 < 0.9 -> LLM must ASK (D-61)",
+      "expect": {
+        "status": "suggest",
+        "matches": [
+          {
+            "city": "Shanghai",
+            "score": 0.875
+          }
+        ],
+        "matchedBy": {
+          "source": "fuzzy"
+        }
+      }
+    },
+    {
+      "id": "det-resolve-019",
+      "fn": "resolve_city",
+      "input": {
+        "original": "Copenhagn",
+        "candidates": ["Copenhagn"]
+      },
+      "note": "single suggest at exactly 0.9 -> LLM may proceed but must say it used Copenhagen (D-61 boundary)",
+      "expect": {
+        "status": "suggest",
+        "matches": [
+          {
+            "city": "Copenhagen",
+            "score": 0.9
+          }
+        ],
+        "matchedBy": {
+          "source": "fuzzy"
+        }
+      }
+    },
+    {
+      "id": "det-resolve-020",
+      "fn": "resolve_city",
+      "input": {
+        "original": "Santiago de Chile",
+        "candidates": ["Santiago de Chile"]
+      },
+      "note": "db name is 'Santiago' (prefix rule 0.92) but 2 suggestions -> must ask",
+      "expect": {
+        "status": "suggest",
+        "matches": [
+          {
+            "city": "Santiago",
+            "score": 0.92
+          },
+          {
+            "city": "Santiago de Cuba",
+            "score": 0.7647
+          }
+        ],
+        "matchedBy": {
+          "source": "fuzzy"
+        }
+      }
+    },
+    {
+      "id": "det-resolve-021",
+      "fn": "resolve_city",
+      "input": {
+        "original": "Atlantis",
+        "candidates": ["Atlantis"]
+      },
+      "note": "fictional city still yields suggest Atlanta 0.75 -> LLM must ask, never auto-pick",
+      "expect": {
+        "status": "suggest",
+        "matches": [
+          {
+            "city": "Atlanta",
+            "score": 0.75
+          }
+        ],
+        "matchedBy": {
+          "source": "fuzzy"
+        }
+      }
+    },
+    {
+      "id": "det-resolve-022",
+      "fn": "resolve_city",
+      "input": {
+        "original": "Qwxzv",
+        "candidates": ["Qwxzv"]
+      },
+      "note": "nothing similar -> not_found",
+      "expect": {
+        "status": "not_found",
+        "matches": []
+      }
+    },
+    {
+      "id": "det-resolve-023",
+      "fn": "resolve_city",
+      "input": {
+        "original": "NYC",
+        "candidates": ["New York"]
+      },
+      "note": "LLM must translate abbreviations",
+      "expect": {
+        "status": "exact",
+        "matches": [
+          {
+            "city": "New York",
+            "isHub": true,
+            "served": true,
+            "connectedHubs": [],
+            "nearestServed": null
+          }
+        ],
+        "matchedBy": {
+          "source": "candidate",
+          "index": 0
+        }
+      }
+    },
+    {
+      "id": "det-resolve-024",
+      "fn": "resolve_city",
+      "input": {
+        "original": "George Town",
+        "candidates": ["George Town"]
+      },
+      "note": "two distinct db cities: 'George Town' and 'Georgetown'",
+      "expect": {
+        "status": "exact",
+        "matches": [
+          {
+            "city": "George Town",
+            "isHub": false,
+            "served": true,
+            "connectedHubs": ["Addis Ababa"],
+            "nearestServed": null
+          }
+        ],
+        "matchedBy": {
+          "source": "candidate",
+          "index": 0
+        }
+      }
+    },
+    {
+      "id": "det-resolve-025",
+      "fn": "resolve_city",
+      "input": {
+        "original": "Georgetown",
+        "candidates": ["Georgetown"]
+      },
+      "note": "exact Georgetown (different city from George Town)",
+      "expect": {
+        "status": "exact",
+        "matches": [
+          {
+            "city": "Georgetown",
+            "isHub": false,
+            "served": true,
+            "connectedHubs": ["Atlanta"],
+            "nearestServed": null
+          }
+        ],
+        "matchedBy": {
+          "source": "candidate",
+          "index": 0
+        }
+      }
+    },
+    {
+      "id": "det-resolve-026",
+      "fn": "resolve_city",
+      "input": {
+        "original": "St. Petersburg",
+        "candidates": ["St. Petersburg"]
+      },
+      "note": "db name is 'Saint Petersburg' -> fuzzy/not exact",
+      "expect": {
+        "status": "suggest",
+        "matches": [
+          {
+            "city": "Saint Petersburg",
+            "score": 0.8125
+          }
+        ],
+        "matchedBy": {
+          "source": "fuzzy"
+        }
+      }
+    },
+    {
+      "id": "det-resolve-027",
+      "fn": "resolve_city",
+      "input": {
+        "original": "Austin",
+        "candidates": ["Austin"]
+      },
+      "note": "exact but NOT served -> nearestServed Copenhagen",
+      "expect": {
+        "status": "exact",
+        "matches": [
+          {
+            "city": "Austin",
+            "isHub": false,
+            "served": false,
+            "connectedHubs": [],
+            "nearestServed": {
+              "city": "Copenhagen",
+              "distanceKm": "120.95"
+            }
+          }
+        ],
+        "matchedBy": {
+          "source": "candidate",
+          "index": 0
+        }
+      }
+    },
+    {
+      "id": "det-pref-001",
+      "fn": "save_preference",
+      "input": {
+        "key": "home_city",
+        "value": "shanghai"
+      },
+      "expect": {
+        "ok": true,
+        "stored": "Shanghai"
+      }
+    },
+    {
+      "id": "det-pref-002",
+      "fn": "save_preference",
+      "input": {
+        "key": "home_city",
+        "value": "SHANGHAI"
+      },
+      "expect": {
+        "ok": true,
+        "stored": "Shanghai"
+      }
+    },
+    {
+      "id": "det-pref-003",
+      "fn": "save_preference",
+      "input": {
+        "key": "home_city",
+        "value": "Shanghai"
+      },
+      "expect": {
+        "ok": true,
+        "stored": "Shanghai"
+      }
+    },
+    {
+      "id": "det-pref-004",
+      "fn": "save_preference",
+      "input": {
+        "key": "home_city",
+        "value": "上海"
+      },
+      "expect": {
+        "ok": false,
+        "code": "INVALID_INPUT",
+        "candidates": []
+      }
+    },
+    {
+      "id": "det-pref-005",
+      "fn": "save_preference",
+      "input": {
+        "key": "home_city",
+        "value": "San Jose"
+      },
+      "expect": {
+        "ok": false,
+        "code": "CITY_AMBIGUOUS",
+        "candidates": ["San Jose", "San José"]
+      }
+    },
+    {
+      "id": "det-pref-006",
+      "fn": "save_preference",
+      "input": {
+        "key": "home_city",
+        "value": "Sao Paolo"
+      },
+      "expect": {
+        "ok": false,
+        "code": "INVALID_INPUT",
+        "candidates": ["São Paulo"]
+      }
+    },
+    {
+      "id": "det-pref-007",
+      "fn": "save_preference",
+      "input": {
+        "key": "home_city",
+        "value": "tromso"
+      },
+      "expect": {
+        "ok": true,
+        "stored": "Tromsø"
+      }
+    },
+    {
+      "id": "det-pref-008",
+      "fn": "save_preference",
+      "input": {
+        "key": "home_city",
+        "value": "Austin"
+      },
+      "expect": {
+        "ok": true,
+        "stored": "Austin"
+      }
+    },
+    {
+      "id": "det-nearest-001",
+      "fn": "nearestServed",
+      "input": {
+        "city": "Abu Dhabi"
+      },
+      "expect": {
+        "served": false,
+        "nearestServed": {
+          "city": "Tirana",
+          "distanceKm": "350.89"
+        },
+        "secondNearest": {
+          "city": "Odesa",
+          "distanceKm": "464.66"
+        },
+        "rawDistanceKm": 350.891721190455
+      }
+    },
+    {
+      "id": "det-nearest-002",
+      "fn": "nearestServed",
+      "input": {
+        "city": "Stuttgart"
+      },
+      "expect": {
+        "served": false,
+        "nearestServed": {
+          "city": "Novi Sad",
+          "distanceKm": "175.14"
+        },
+        "secondNearest": {
+          "city": "Montego Bay",
+          "distanceKm": "478.38"
+        },
+        "rawDistanceKm": 175.13708916160505
+      }
+    },
+    {
+      "id": "det-nearest-003",
+      "fn": "nearestServed",
+      "input": {
+        "city": "Austin"
+      },
+      "expect": {
+        "served": false,
+        "nearestServed": {
+          "city": "Copenhagen",
+          "distanceKm": "120.95"
+        },
+        "secondNearest": {
+          "city": "Ohrid",
+          "distanceKm": "197.27"
+        },
+        "rawDistanceKm": 120.95040305844375
+      }
+    },
+    {
+      "id": "det-nearest-004",
+      "fn": "nearestServed",
+      "input": {
+        "city": "Srinagar"
+      },
+      "expect": {
+        "served": false,
+        "nearestServed": {
+          "city": "Edmonton",
+          "distanceKm": "226.81"
+        },
+        "secondNearest": {
+          "city": "Rome",
+          "distanceKm": "320.81"
+        },
+        "rawDistanceKm": 226.80828909014767
+      }
+    },
+    {
+      "id": "det-nearest-005",
+      "fn": "nearestServed",
+      "input": {
+        "city": "Pokhara"
+      },
+      "expect": {
+        "served": false,
+        "nearestServed": {
+          "city": "Townsville",
+          "distanceKm": "208.97"
+        },
+        "secondNearest": {
+          "city": "Santa Cruz de la Sierra",
+          "distanceKm": "521.65"
+        },
+        "rawDistanceKm": 208.96889720721597
+      }
+    },
+    {
+      "id": "det-nearest-006",
+      "fn": "nearestServed",
+      "input": {
+        "city": "Columbus"
+      },
+      "expect": {
+        "served": false,
+        "nearestServed": {
+          "city": "Ottawa",
+          "distanceKm": "114.13"
+        },
+        "secondNearest": {
+          "city": "San Antonio",
+          "distanceKm": "350.60"
+        },
+        "rawDistanceKm": 114.12712210513327
+      }
+    },
+    {
+      "id": "det-nearest-007",
+      "fn": "nearestServed",
+      "input": {
+        "city": "Savannah"
+      },
+      "expect": {
+        "served": false,
+        "nearestServed": {
+          "city": "Gyumri",
+          "distanceKm": "307.21"
+        },
+        "secondNearest": {
+          "city": "Djerba",
+          "distanceKm": "315.33"
+        },
+        "rawDistanceKm": 307.21002587806277
+      }
+    },
+    {
+      "id": "det-nearest-008",
+      "fn": "nearestServed",
+      "input": {
+        "city": "Fort Lauderdale"
+      },
+      "expect": {
+        "served": false,
+        "nearestServed": {
+          "city": "Xiamen",
+          "distanceKm": "185.61"
+        },
+        "secondNearest": {
+          "city": "Tangier",
+          "distanceKm": "422.19"
+        },
+        "rawDistanceKm": 185.60711193270586
+      }
+    },
+    {
+      "id": "det-nearest-009",
+      "fn": "nearestServed",
+      "input": {
+        "city": "Los Cabos"
+      },
+      "expect": {
+        "served": false,
+        "nearestServed": {
+          "city": "Basra",
+          "distanceKm": "280.14"
+        },
+        "secondNearest": {
+          "city": "Dakar",
+          "distanceKm": "384.09"
+        },
+        "rawDistanceKm": 280.1446055165082
+      }
+    },
+    {
+      "id": "det-nearest-010",
+      "fn": "nearestServed",
+      "input": {
+        "city": "Iquitos"
+      },
+      "expect": {
+        "served": false,
+        "nearestServed": {
+          "city": "Hartford",
+          "distanceKm": "200.66"
+        },
+        "secondNearest": {
+          "city": "Jerusalem",
+          "distanceKm": "296.95"
+        },
+        "rawDistanceKm": 200.66140635408692
+      }
+    },
+    {
+      "id": "det-nearest-011",
+      "fn": "unservedSet",
+      "input": {},
+      "expect": {
+        "unserved": [
+          "Abu Dhabi",
+          "Austin",
+          "Columbus",
+          "Fort Lauderdale",
+          "Iquitos",
+          "Los Cabos",
+          "Pokhara",
+          "Savannah",
+          "Srinagar",
+          "Stuttgart"
+        ],
+        "count": 10,
+        "cities": 711,
+        "hubs": 40,
+        "hubLinks": 151
+      }
+    }
+  ]
+}
