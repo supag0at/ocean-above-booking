@@ -49,3 +49,41 @@ Compose mounts them as file-based secrets (D-28); they are never environment var
 ```sh
 docker compose -f infra/compose/compose.yml config
 ```
+
+## 部署
+
+本机没有域名。非机密站点配置在 `infra/compose/site.env`（`SITE_ADDRESS=:80`、`PUBLIC_ORIGIN=http://127.0.0.1`、`COOKIE_SECURE=0`）。拿到域名之后只改这三个值，不改代码。
+
+机密只放在 gitignore 的 `infra/secrets/`。根目录 `.env` 里的 DeepSeek key 只写入 `deepseek_api_key`，不要把 `.env` 拷进部署目录，也不要在 compose 里用 `${...}` 插值任何机密。
+
+Windows 上生成机密（不打印内容）：
+
+```powershell
+powershell -File infra/vm/init.ps1 -EnvFile C:\path\to\.env
+```
+
+Linux / Git Bash：
+
+```sh
+bash infra/vm/init.sh /path/to/.env
+```
+
+启动（项目名是 compose 文件里的 `ocean-above`，宿主机端口保持 80 和 443）：
+
+```sh
+docker compose -f infra/compose/compose.yml --env-file infra/compose/site.env up --build -d
+```
+
+看健康和一次性迁移是否退出 0：
+
+```sh
+docker compose -f infra/compose/compose.yml --env-file infra/compose/site.env ps
+```
+
+验收：
+
+```sh
+node scripts/verify-deploy.ts
+```
+
+浏览器打开 `http://127.0.0.1/`。登录是 `POST http://127.0.0.1/api/v1/auth/login`，`Origin: http://127.0.0.1`，body 只有用户名。不要为了验收去调用 DeepSeek。
