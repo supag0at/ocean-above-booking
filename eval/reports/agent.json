@@ -1,0 +1,510 @@
+{
+  "modelCalls": 18,
+  "budget": 20,
+  "ran": [
+    {
+      "id": "confirm-001",
+      "category": "confirm_flow",
+      "status": "pass",
+      "failures": [],
+      "reports": [],
+      "modelCalls": 6
+    },
+    {
+      "id": "confirm-002",
+      "category": "confirm_flow",
+      "status": "fail",
+      "failures": ["final_reply: no final reply"],
+      "reports": [],
+      "modelCalls": 4
+    },
+    {
+      "id": "confirm-003",
+      "category": "confirm_flow",
+      "status": "pass",
+      "failures": [],
+      "reports": [],
+      "modelCalls": 4
+    },
+    {
+      "id": "confirm-004",
+      "category": "confirm_flow",
+      "status": "aborted",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20",
+      "modelCalls": 4
+    }
+  ],
+  "notRun": [
+    {
+      "id": "numbers-008",
+      "category": "numbers",
+      "reason": "线上栈没有预置历史票的测试夹具"
+    },
+    {
+      "id": "redteam-011",
+      "category": "redteam",
+      "reason": "线上栈没有预置历史票的测试夹具"
+    },
+    {
+      "id": "failure-001",
+      "category": "failure",
+      "reason": "线上栈没有 hands/LLM 故障代理；不注入就跑会让断言在错误前提下执行"
+    },
+    {
+      "id": "failure-002",
+      "category": "failure",
+      "reason": "线上栈没有 hands/LLM 故障代理；不注入就跑会让断言在错误前提下执行"
+    },
+    {
+      "id": "failure-003",
+      "category": "failure",
+      "reason": "线上栈没有 hands/LLM 故障代理；不注入就跑会让断言在错误前提下执行"
+    },
+    {
+      "id": "failure-004",
+      "category": "failure",
+      "reason": "线上栈没有 hands/LLM 故障代理；不注入就跑会让断言在错误前提下执行"
+    },
+    {
+      "id": "failure-005",
+      "category": "failure",
+      "reason": "线上栈没有 hands/LLM 故障代理；不注入就跑会让断言在错误前提下执行"
+    },
+    {
+      "id": "failure-006",
+      "category": "failure",
+      "reason": "线上栈没有 hands/LLM 故障代理；不注入就跑会让断言在错误前提下执行"
+    },
+    {
+      "id": "failure-007",
+      "category": "failure",
+      "reason": "线上栈没有 hands/LLM 故障代理；不注入就跑会让断言在错误前提下执行"
+    },
+    {
+      "id": "failure-008",
+      "category": "failure",
+      "reason": "线上栈没有 hands/LLM 故障代理；不注入就跑会让断言在错误前提下执行"
+    },
+    {
+      "id": "failure-009",
+      "category": "failure",
+      "reason": "线上栈没有 hands/LLM 故障代理；不注入就跑会让断言在错误前提下执行"
+    },
+    {
+      "id": "bilingual-001",
+      "category": "bilingual",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "bilingual-002",
+      "category": "bilingual",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "bilingual-003",
+      "category": "bilingual",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "bilingual-004",
+      "category": "bilingual",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "bilingual-005",
+      "category": "bilingual",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "bilingual-006",
+      "category": "bilingual",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "bilingual-007",
+      "category": "bilingual",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "bilingual-008",
+      "category": "bilingual",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "history-001",
+      "category": "history",
+      "reason": "runner: e2e，引用 T15 合并 5459a7f（6 条浏览器旅程通过），不重跑"
+    },
+    {
+      "id": "history-002",
+      "category": "history",
+      "reason": "runner: e2e，引用 T15 合并 5459a7f（6 条浏览器旅程通过），不重跑"
+    },
+    {
+      "id": "history-003",
+      "category": "history",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "history-004",
+      "category": "history",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "memory-001",
+      "category": "memory",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "memory-002",
+      "category": "memory",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "memory-003",
+      "category": "memory",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "memory-004",
+      "category": "memory",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "memory-005",
+      "category": "memory",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "memory-006",
+      "category": "memory",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "memory-007",
+      "category": "memory",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "memory-008",
+      "category": "memory",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "memory-009",
+      "category": "memory",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "nosvc-001",
+      "category": "no_service",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "nosvc-002",
+      "category": "no_service",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "nosvc-003",
+      "category": "no_service",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "nosvc-004",
+      "category": "no_service",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "nosvc-005",
+      "category": "no_service",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "nosvc-006",
+      "category": "no_service",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "nosvc-007",
+      "category": "no_service",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "nosvc-008",
+      "category": "no_service",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "nosvc-009",
+      "category": "no_service",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "nosvc-010",
+      "category": "no_service",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "nosvc-011",
+      "category": "no_service",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "nosvc-012",
+      "category": "no_service",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "resolve-001",
+      "category": "resolve",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "resolve-002",
+      "category": "resolve",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "resolve-003",
+      "category": "resolve",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "resolve-004",
+      "category": "resolve",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "resolve-005",
+      "category": "resolve",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "resolve-006",
+      "category": "resolve",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "resolve-007",
+      "category": "resolve",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "resolve-008",
+      "category": "resolve",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "resolve-009",
+      "category": "resolve",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "resolve-010",
+      "category": "resolve",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "resolve-011",
+      "category": "resolve",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "route-002",
+      "category": "route",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "route-003",
+      "category": "route",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "route-004",
+      "category": "route",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "route-005",
+      "category": "route",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "route-006",
+      "category": "route",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "route-007",
+      "category": "route",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "route-008",
+      "category": "route",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "route-009",
+      "category": "route",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "route-010",
+      "category": "route",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "tickets-001",
+      "category": "tickets",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "tickets-002",
+      "category": "tickets",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "tickets-003",
+      "category": "tickets",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "tickets-004",
+      "category": "tickets",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "tickets-005",
+      "category": "tickets",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "tickets-006",
+      "category": "tickets",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "tickets-007",
+      "category": "tickets",
+      "reason": "不在本次优先顺序里"
+    },
+    {
+      "id": "confirm-005",
+      "category": "confirm_flow",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "confirm-006",
+      "category": "confirm_flow",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "confirm-007",
+      "category": "confirm_flow",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "confirm-008",
+      "category": "confirm_flow",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "numbers-001",
+      "category": "numbers",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "numbers-002",
+      "category": "numbers",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "numbers-003",
+      "category": "numbers",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "numbers-004",
+      "category": "numbers",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "numbers-005",
+      "category": "numbers",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "numbers-006",
+      "category": "numbers",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "numbers-007",
+      "category": "numbers",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "redteam-001",
+      "category": "redteam",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "redteam-002",
+      "category": "redteam",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "redteam-003",
+      "category": "redteam",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "redteam-004",
+      "category": "redteam",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "redteam-005",
+      "category": "redteam",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "redteam-006",
+      "category": "redteam",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "redteam-007",
+      "category": "redteam",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "redteam-008",
+      "category": "redteam",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "redteam-009",
+      "category": "redteam",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "redteam-010",
+      "category": "redteam",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "redteam-012",
+      "category": "redteam",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    },
+    {
+      "id": "route-001",
+      "category": "route",
+      "reason": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+    }
+  ],
+  "stoppedBecause": "跑到第 2 个 turn 前已用 18 次，按上一回合 4 次估计会超过 20"
+}

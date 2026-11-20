@@ -1,0 +1,68 @@
+{
+  "total": 203,
+  "passed": 203,
+  "failed": [],
+  "oracleDisagreements": [
+    {
+      "id": "det-route-037",
+      "kind": "quote-error",
+      "caseValue": {
+        "ok": false,
+        "code": "CITY_NOT_FOUND"
+      },
+      "oracleValue": {
+        "ok": true,
+        "legs": [
+          {
+            "from": "Shanghai",
+            "to": "Atlanta",
+            "distanceKm": 5040.015872990878
+          },
+          {
+            "from": "Atlanta",
+            "to": "Tokyo",
+            "distanceKm": 2115.0756487653107
+          }
+        ],
+        "transferCities": ["Atlanta"],
+        "path": ["Shanghai", "Atlanta", "Tokyo"],
+        "totalDistanceKm": 7155.091521756189,
+        "totalDistanceKm2dp": 7155.09,
+        "priceCents": 93016
+      }
+    },
+    {
+      "id": "det-route-040",
+      "kind": "quote",
+      "caseValue": {
+        "ok": true,
+        "path": ["Shanghai", "Hong Kong", "São Paulo"],
+        "priceCents": 42379
+      },
+      "oracleValue": {
+        "ok": false,
+        "error": "UNKNOWN_CITY",
+        "unknown": ["São Paulo"]
+      }
+    }
+  ],
+  "property": {
+    "pairs": 490700,
+    "hist": {
+      "1": 2530,
+      "2": 40164,
+      "3": 123656,
+      "4": 156138,
+      "5": 113488,
+      "6": 45028,
+      "7": 9492,
+      "8": 204
+    },
+    "directEdges": 1265,
+    "priceRoundDiff": 7932,
+    "oraclePathDiff": 0,
+    "oraclePriceDiff": 0,
+    "oracleKmDiff": 0,
+    "tieCheck": "未重跑 gen 脚本的全量简单路径枚举。全量有序对上，flight-core 与 oracle 的路径/价格若一致，则两边选出的最优相同；这不能单独证明「次优距离差 < 1e-6」的条数为 0。"
+  }
+}
