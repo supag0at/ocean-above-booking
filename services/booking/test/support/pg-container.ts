@@ -59,21 +59,30 @@ function call(socketPath: string, method: string, path: string, body?: unknown, 
 
 let socket: string | null | undefined;
 
-/** The Docker socket that answers /_ping, or null when no daemon is reachable (tests then skip, like CT-06). */
+/**
+ * The Docker socket that answers /_ping, or null when no daemon is reachable (tests then skip, like CT-06).
+ * Docker Desktop's resource saver can take several seconds to wake the engine on the first request (a 3 s probe
+ * timed out and silently skipped the whole suite), so each candidate gets a few generous attempts. A missing
+ * socket / pipe (ENOENT) is skipped at once. Skipping is announced loudly: a skip must never look like a pass.
+ */
 export async function dockerSocket(): Promise<string | null> {
   if (socket !== undefined) return socket;
   socket = null;
-  for (const candidate of socketCandidates()) {
-    try {
-      const r = await call(candidate, 'GET', '/_ping', undefined, 3000);
-      if (r.status === 200) {
-        socket = candidate;
-        break;
+  outer: for (const candidate of socketCandidates()) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const r = await call(candidate, 'GET', '/_ping', undefined, 10_000);
+        if (r.status === 200) {
+          socket = candidate;
+          break outer;
+        }
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') break; // no such socket / pipe: next candidate
       }
-    } catch {
-      // try the next candidate
+      await sleep(1000);
     }
   }
+  if (socket === null) console.warn('[T07] SKIPPED: docker daemon is not reachable; booking DB tests did NOT run');
   return socket;
 }
 
@@ -175,7 +184,7 @@ export async function startPgContainer(label = 'fb-t07'): Promise<PgContainer> {
       });
 
     // wait for the init script to finish, then for the real server to accept fb_owner over TCP
-    const deadline = Date.now() + 120_000;
+    const deadline = Date.now() + 180_000; // under the 240 s beforeAll timeout, so a slow start fails with the postgres logs
     let ready = false;
     while (Date.now() < deadline) {
       const text = await logs();
@@ -202,3 +211,6 @@ export async function startPgContainer(label = 'fb-t07'): Promise<PgContainer> {
     throw err;
   }
 }
+
+/** beforeAll timeout for files that start a container (above startPgContainer's own 180 s readiness deadline). */
+export const CONTAINER_HOOK_TIMEOUT_MS = 240_000;
