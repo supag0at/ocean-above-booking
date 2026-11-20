@@ -4,19 +4,25 @@
 #   - networks: subnets, internal flags, memberships and fixed addresses  (A-01 §2.2)
 #   - secrets:  declarations and the secret × container matrix            (A-01 §2.3, D-28)
 #   - no secret is ever passed as an environment variable; no ${...} interpolation of secrets
-# PLACEHOLDER (TODO(T14)): images, build, commands, healthchecks, data volumes, and all non-secret environment
-#   variables except the ones A-01 names (§2.2 gateway binds/peers, §2.3 PG_HOST/PG_DATABASE/PG_USER).
+# Non-secret site settings are interpolated from --env-file infra/compose/site.env
+# (SITE_ADDRESS, PUBLIC_ORIGIN, COOKIE_SECURE only). Defaults match that file so
+# `docker compose config` without --env-file still resolves.
 #
 # Secret files live in infra/secrets/<name> (gitignored); only infra/secrets/<name>.example is committed.
 
 name: ocean-above
 
 x-node-service: &node-service
-  image: node:24-bookworm-slim # TODO(T14): per-service image built from infra/compose/<svc>.Dockerfile
+  # One shared image. Only gateway carries `build`; the other services reuse the tag.
+  # Parallel builds of the same tag race inside compose bake ("image already exists").
+  image: ocean-above-node:local
   user: '1000:1000'
   read_only: true
+  working_dir: /app
   restart: unless-stopped
-  command: ['sleep', 'infinity'] # TODO(T14): real entrypoint
+  tmpfs:
+    - /tmp
+    - /home/node
   environment: &node-env
     NODE_ENV: production
 
@@ -61,16 +67,37 @@ configs:
 
 services:
   caddy:
-    image: caddy:2 # TODO(T14): build from infra/caddy/ (multi-stage, copies the apps/web build output, D-27)
+    build:
+      context: ../..
+      dockerfile: infra/caddy/Dockerfile
+    image: ocean-above-caddy:local
     restart: unless-stopped
     ports: ['80:80', '443:443']
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
     networks:
       edge: {}
       front: { ipv4_address: 172.30.1.10 }
     # no secrets (A-01 §2.3)
+    depends_on:
+      harness:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
 
   gateway:
     <<: *node-service
+    build:
+      context: ../..
+      dockerfile: infra/compose/node.Dockerfile
+    command: ['node', 'services/gateway/src/main.ts']
     networks:
       front: { ipv4_address: 172.30.1.20 }
       app: { ipv4_address: 172.30.2.20 }
@@ -82,9 +109,18 @@ services:
       PUBLIC_ALLOWED_PEERS: 172.30.1.10/32 # caddy only
       INTERNAL_BIND: 172.30.2.20:8081
       INTERNAL_ALLOWED_PEERS: 172.30.2.128/25 # harness dynamic range
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://127.0.0.1}
+      COOKIE_SECURE: ${COOKIE_SECURE:-0}
       PG_HOST: 172.30.4.10
+      PG_PORT: '5432'
       PG_DATABASE: app
       PG_USER: fb_gateway
+      REDIS_HOST: 172.30.2.40
+      REDIS_PORT: '6379'
+      REDIS_USER: gateway
+      BOOKING_URL: http://172.30.3.30:8083
+      AGENT_DELTA_MODE: stream
+      LOG_LEVEL: info
     secrets:
       - pg_gateway_password
       - redis_gateway_password
@@ -95,33 +131,74 @@ services:
     configs:
       - source: hands_token_public_key
         target: /run/configs/hands_token_public_key.pem
-    depends_on: [postgres, redis]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      booking:
+        condition: service_healthy
+      hands:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'node', '/app/infra/compose/ready.mjs', 'http://172.30.1.20:8080/readyz']
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 40s
 
   harness:
     <<: *node-service
+    command: ['node', 'services/harness/src/main.ts']
     networks:
       app: {} # dynamic address, always inside 172.30.2.128/25
       egress: {}
     environment:
       <<: *node-env
-      # health check only on 127.0.0.1:8084 — variable names: T09/T14
+      REDIS_HOST: 172.30.2.40
+      REDIS_PORT: '6379'
+      REDIS_USER: harness
+      SESSION_API_URL: http://172.30.2.20:8081
+      HANDS_URL: http://172.30.2.30:8082
+      LOG_LEVEL: info
+      # LLM_BASE_URL is intentionally unset (catalog DeepSeek address). Do not call the provider from this task.
     secrets:
       - redis_harness_password
       - deepseek_api_key
       - harness_service_token # holds
-    depends_on: [redis]
+    depends_on:
+      redis:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      # No HTTP port (do not add one). Healthy means the main process is still pid 1.
+      test: ['CMD-SHELL', 'kill -0 1']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
 
   hands:
     <<: *node-service
+    command: ['node', 'services/hands/src/run.ts']
     networks:
       app: { ipv4_address: 172.30.2.30 }
       db_main: { ipv4_address: 172.30.4.30 }
     environment:
       <<: *node-env
-      # listen 172.30.2.30:8082, allowed peers 172.30.2.128/25 (harness only) — variable names: T08/T14
+      HANDS_BIND: 172.30.2.30:8082
+      HANDS_ALLOWED_PEERS: 172.30.2.128/25
       PG_HOST: 172.30.4.10
+      PG_PORT: '5432'
       PG_DATABASE: app
       PG_USER: fb_hands
+      LOCATIONS_DB_PATH: /data/locations.db
+      LOG_LEVEL: info
+      # HANDS_VERIFY_KEY_PATHS is not set. The code default is the mounted config path.
+      # Putting it in the environment fails CT-04: the name matches /key/i and the path matches /token|key/i.
     secrets:
       - pg_hands_password
     configs:
@@ -132,28 +209,54 @@ services:
         source: ../../locations.db
         target: /data/locations.db # target path: placeholder (T08/T14); :ro and hands-only are final
         read_only: true
-    depends_on: [postgres]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD', 'node', '/app/infra/compose/ready.mjs', 'http://172.30.2.30:8082/readyz']
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 40s
 
   booking:
     <<: *node-service
+    command: ['node', 'services/booking/src/main.ts']
     networks:
       bk: { ipv4_address: 172.30.3.30 }
       db_booking: { ipv4_address: 172.30.5.30 }
     environment:
       <<: *node-env
-      # listen 172.30.3.30:8083, allowed peers 172.30.3.20/32 (gateway only) — variable names: T07/T14
+      BOOKING_BIND: 172.30.3.30:8083
+      BOOKING_ALLOWED_PEERS: 172.30.3.20/32
       PG_HOST: 172.30.5.10
+      PG_PORT: '5432'
       PG_DATABASE: app
       PG_USER: fb_booking
+      LOG_LEVEL: info
+      # SECRETS_DIR is not set; the process default is /run/secrets.
     secrets:
       - pg_booking_password
       - booking_service_token # verifies
-    depends_on: [postgres]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD', 'node', '/app/infra/compose/ready.mjs', 'http://172.30.3.30:8083/readyz']
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 40s
 
   postgres:
     image: postgres:16
     user: '999:999'
     restart: unless-stopped
+    command: ['postgres', '-c', 'hba_file=/infra-db/pg_hba.conf']
     networks:
       db_main: { ipv4_address: 172.30.4.10 }
       db_booking: { ipv4_address: 172.30.5.10 }
@@ -168,6 +271,7 @@ services:
       - pg_hands_password # init only
       - pg_booking_password # init only
     volumes:
+      - pg_data:/var/lib/postgresql/data
       - type: bind
         source: ../db
         target: /infra-db
@@ -176,29 +280,66 @@ services:
         source: ../db/init
         target: /docker-entrypoint-initdb.d
         read_only: true
-    # TODO(T01/T14): volumes for data, pg_hba from A-01 §2.2
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d app']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
 
   redis:
     image: redis:7
     user: '999:999'
     restart: unless-stopped
+    entrypoint: ['/bin/sh', '/entrypoint.sh']
     networks:
       app: { ipv4_address: 172.30.2.40 }
     secrets:
       - redis_gateway_password
       - redis_harness_password
-    # TODO(T14): entrypoint infra/redis/entrypoint.sh (aclfile on tmpfs), AOF everysec, data volume
+    volumes:
+      - type: bind
+        source: ../redis/entrypoint.sh
+        target: /entrypoint.sh
+        read_only: true
+      - redis_data:/data
+    tmpfs:
+      - /tmp/acl:uid=999,gid=999,mode=0700
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'REDISCLI_AUTH=$$(tr -d ''\r\n'' < /run/secrets/redis_gateway_password) redis-cli --user gateway -h 127.0.0.1 --no-auth-warning ping | grep -q PONG',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
 
   migrate:
     <<: *node-service
+    command: ['bash', '/app/infra/db/migrate.sh']
     restart: 'no'
     networks:
       db_main: { ipv4_address: 172.30.4.40 }
     environment:
       <<: *node-env
       PG_HOST: 172.30.4.10
+      PG_PORT: '5432'
       PG_DATABASE: app
       PG_USER: fb_owner
+      INFRA_DB_DIR: /app/infra/db
+      LOG_LEVEL: info
     secrets:
       - pg_owner_password
-    depends_on: [postgres]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pg_data: {}
+  redis_data: {}
+  caddy_data: {}
+  caddy_config: {}
