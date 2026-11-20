@@ -37,6 +37,7 @@ const world = {
   ticketNo: '',
   ticketId: '',
   modelTurns: -1,
+  lastEventId: '',
 };
 
 let context: BrowserContext | undefined;
@@ -45,6 +46,11 @@ let page: Page | undefined;
 function chat(): Page {
   if (!page) throw new Error('page was not created');
   return page;
+}
+
+/** Every copy of the quote scenario 2 checked. 「确认」 can offer that same id again. */
+function offeredCards(current: Page) {
+  return current.locator(`[data-testid="quote-card"][data-quote-id="${world.quoteId}"]`);
 }
 
 test.describe.configure({ mode: 'serial' });
@@ -66,10 +72,34 @@ test.beforeAll(async ({ browser }) => {
       })
       .catch(() => undefined);
   });
-  page.on('request', (req) => {
-    if (!req.url().includes('/stream')) return;
-    const id = req.headers()['last-event-id'];
-    if (id) lastEventIds.push(id);
+  // Playwright's request.headers() hides Last-Event-ID. Chrome reports it on requestWillBeSentExtraInfo.
+  const cdp = await context.newCDPSession(page);
+  await cdp.send('Network.enable');
+  const streamUrl = new Map<string, string>();
+  const streamLei = new Map<string, string>();
+  const takeStream = (requestId: string): void => {
+    const url = streamUrl.get(requestId);
+    const lei = streamLei.get(requestId);
+    if (url === undefined || lei === undefined) return;
+    streamUrl.delete(requestId);
+    streamLei.delete(requestId);
+    if (lei !== '') lastEventIds.push(lei);
+  };
+  cdp.on('Network.requestWillBeSent', (event: { requestId: string; request?: { url?: string } }) => {
+    const url = event.request?.url ?? '';
+    if (!url.includes('/stream')) {
+      streamLei.delete(event.requestId);
+      return;
+    }
+    streamUrl.set(event.requestId, url);
+    takeStream(event.requestId);
+  });
+  cdp.on('Network.requestWillBeSentExtraInfo', (event: { requestId: string; headers?: Record<string, string> }) => {
+    const headers = event.headers ?? {};
+    const lei = headers['Last-Event-ID'] ?? headers['last-event-id'] ?? '';
+    if (lei === '') return;
+    streamLei.set(event.requestId, lei);
+    takeStream(event.requestId);
   });
 });
 
@@ -160,18 +190,20 @@ test('3. 输入「确认」不出票，点击报价卡才出票，再确认仍�
   expect(confirmPosts).toBe(0);
   await expect(current.getByTestId('ticket-card')).toHaveCount(0);
   await expect(current.getByTestId('booked-state')).toHaveCount(0);
-  await expect(current.getByTestId('confirm-button')).toHaveText('确认下单');
-  await expect(current.getByText('只有点击此按钮才会出票')).toBeVisible();
+  const cards = offeredCards(current);
+  const card = cards.first();
+  await expect(card.getByTestId('confirm-button')).toHaveText('确认下单');
+  await expect(card.getByText('只有点击此按钮才会出票')).toBeVisible();
 
   await current.getByRole('link', { name: '我的机票', exact: true }).click();
   await expect(current.getByText('你还没有机票')).toBeVisible();
   await current.goto(`/chat/${world.sessionId}`);
-  await expect(current.getByTestId('confirm-button')).toHaveText('确认下单');
+  await expect(card.getByTestId('confirm-button')).toHaveText('确认下单');
 
   const created = current.waitForResponse(
     (res) => res.request().method() === 'POST' && res.url().includes(`/quotes/${world.quoteId}/confirm`),
   );
-  await current.getByTestId('confirm-button').click();
+  await card.getByTestId('confirm-button').click();
   const createdRes = await created;
   expect(createdRes.status()).toBe(201);
   const createdBody = (await createdRes.json()) as {
@@ -184,8 +216,8 @@ test('3. 输入「确认」不出票，点击报价卡才出票，再确认仍�
 
   await expect(current.getByTestId('ticket-card')).toHaveCount(1);
   await expect(current.getByTestId('ticket-no')).toHaveText(world.ticketNo);
-  await expect(current.getByTestId('booked-state')).toContainText(world.ticketNo);
-  await expect(current.getByTestId('confirm-button')).toHaveCount(0);
+  await expect(card.getByTestId('booked-state')).toContainText(world.ticketNo);
+  await expect(cards.getByTestId('confirm-button')).toHaveCount(0);
 
   // The button is removed once the card is booked, so the same browser session repeats the button's request.
   const replay = await replayConfirm(current, world.quoteId);
@@ -194,9 +226,31 @@ test('3. 输入「确认」不出票，点击报价卡才出票，再确认仍�
   expect(replay.ticketNo).toBe(world.ticketNo);
   await expect(current.getByTestId('ticket-card')).toHaveCount(1);
 
+  // setOffline does not drop this SSE. Stop the gateway while this EventSource is still open:
+  // it already received `id:` frames, so the browser retry carries Last-Event-ID.
+  const beforeResume = lastEventIds.length;
+  try {
+    await docker(['stop', '-t', '5', GATEWAY]);
+    await expect.poll(() => lastEventIds.length, { timeout: 20_000 }).toBeGreaterThan(beforeResume);
+    world.lastEventId = lastEventIds.at(-1) ?? '';
+    expect(world.lastEventId).toMatch(/^\d+$/);
+  } finally {
+    await docker(['start', GATEWAY]);
+  }
+  await waitGatewayHealthy();
+  await expect
+    .poll(
+      async () => {
+        const res = await current.request.get('/api/v1/healthz').catch(() => null);
+        return res?.status() ?? 0;
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(200);
+
   await current.getByRole('link', { name: '我的机票', exact: true }).click();
   await expect(current.getByTestId('ticket-item')).toHaveCount(1);
-  await expect(current.getByText(world.ticketNo)).toBeVisible();
+  await expect(current.getByTestId('ticket-item')).toContainText(world.ticketNo);
 
   const events = await allEvents(current, world.sessionId);
   world.modelTurns = countModelTurns(events);
@@ -219,18 +273,8 @@ test('3. 输入「确认」不出票，点击报价卡才出票，再确认仍�
 
 test('4. 刷新后对话还在，断线后续上带 Last-Event-ID', async () => {
   const current = chat();
+  expect(world.lastEventId).toMatch(/^\d+$/);
   await current.goto(`/chat/${world.sessionId}`);
-  await expect(current.getByTestId('user-bubble').filter({ hasText: FLIGHT })).toBeVisible();
-  const before = lastEventIds.length;
-  if (!context) throw new Error('context missing');
-  try {
-    await context.setOffline(true);
-    await current.waitForTimeout(800);
-  } finally {
-    await context.setOffline(false);
-  }
-  await expect.poll(() => lastEventIds.length, { timeout: 20_000 }).toBeGreaterThan(before);
-  expect(lastEventIds.at(-1)).toMatch(/^\d+$/);
   await expect(current.getByTestId('user-bubble').filter({ hasText: FLIGHT })).toBeVisible();
   await expect(current.getByTestId('user-bubble').filter({ hasText: CONFIRM_TEXT })).toBeVisible();
 
@@ -240,9 +284,13 @@ test('4. 刷新后对话还在，断线后续上带 Last-Event-ID', async () => 
   await expect(current.locator('.username')).toHaveText(world.userA);
   await expect(current.getByTestId('user-bubble').filter({ hasText: FLIGHT })).toBeVisible();
   await expect(current.getByTestId('user-bubble').filter({ hasText: CONFIRM_TEXT })).toBeVisible();
-  await expect(current.getByTestId('quote-card')).toBeVisible();
-  await expect(current.getByTestId('quote-card').getByTestId('route-line')).toHaveText(world.routeLine);
-  await expect(current.getByTestId('quote-card').getByTestId('price')).toHaveText(world.priceText);
+  const cards = offeredCards(current);
+  const copies = await cards.count();
+  expect(copies).toBeGreaterThan(0);
+  for (let i = 0; i < copies; i += 1) {
+    await expect(cards.nth(i).getByTestId('route-line')).toHaveText(world.routeLine);
+    await expect(cards.nth(i).getByTestId('price')).toHaveText(world.priceText);
+  }
   await expect(current.getByTestId('ticket-card')).toHaveCount(1);
   await expect(current.getByTestId('ticket-no')).toHaveText(world.ticketNo);
   await expect(current.getByText('中间过程，不作为报价依据').first()).toBeVisible();
@@ -327,7 +375,7 @@ test('6. 用户 A 和用户 B 互相看不到对方的会话和机票', async ()
     await expect(userA.getByText('找不到这个对话')).toBeVisible();
     await userA.getByRole('link', { name: '我的机票', exact: true }).click();
     await expect(userA.getByTestId('ticket-item')).toHaveCount(1);
-    await expect(userA.getByText(world.ticketNo)).toBeVisible();
+    await expect(userA.getByTestId('ticket-item')).toContainText(world.ticketNo);
   } finally {
     await other.close();
   }
