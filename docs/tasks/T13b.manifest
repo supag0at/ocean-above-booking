@@ -1,0 +1,4 @@
+# T13b eval run — whitelist
+eval/runner/**
+eval/reports/**
+docs/tasks/T13b.md

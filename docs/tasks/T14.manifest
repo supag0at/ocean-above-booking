@@ -1,0 +1,5 @@
+# T14 deploy — whitelist
+infra/**
+README.md
+scripts/verify-deploy.ts
+docs/tasks/T14.md
