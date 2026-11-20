@@ -17,8 +17,6 @@ import {
   AgentRunFailedPayload,
   BookingConfirmedPayload,
   BookingFailedPayload,
-  newMemoryId,
-  idPattern,
   ID_PREFIX,
   QuoteOfferedPayload,
   WRITERS,
@@ -212,11 +210,8 @@ describe('M-18 / M-19 server entry', () => {
   it('re-exports LOCATIONS_DB_SHA256 from flight (same value)', () => {
     expect(LOCATIONS_DB_SHA256).toBe(flight.LOCATIONS_DB_SHA256);
   });
-  it('memory ids use the m_ prefix', () => {
-    expect(ID_PREFIX.memory).toBe('m_');
-    const id = newMemoryId();
-    expect(new RegExp(idPattern('m_')).test(id)).toBe(true);
-    expect(id).toHaveLength(2 + 26);
+  it('M-24: memory ids are DB uuids, no m_ prefix', () => {
+    expect('memory' in ID_PREFIX).toBe(false);
   });
 });
 

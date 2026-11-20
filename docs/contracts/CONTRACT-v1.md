@@ -1,4 +1,4 @@
-# 契约 v1（v1.0.2，2026-11-19；v1.0 在 G1 冻结）
+# 契约 v1（v1.1.0，2026-11-19；v1.0 在 G1 冻结）
 
 - 日期：2026-11-19；作者：父会话（C-01 合并，T1）
 - 状态：✅ **v1.0 已冻结**（2026-11-19 G1，用户原话："确认冻结"）。之后任何修改都要走 §5 的变更流程，升级版本号并广播。T01 已把本文落实成代码（契约包、迁移、契约测试）。
@@ -62,6 +62,7 @@
 | M-21 | 整合时剩下的两处 | `booking.confirmed` 和 `booking.failed` 由 **gateway** 写入（A-01 §5.2、§3.3：booking 没有 events 表的授权，gateway 收到 booking 的同步应答后再写事件）；公共视图里 toolResult 那一支**不加** `kind`，前端按有没有 `toolCallId` 来区分（A-01 §9.4）；`list_my_tickets` 返回 `TicketView[]`；`ExecuteResponse.error.code` 保持为 agent 错误码的子集 | 都按负责方文档的原文 |
 | M-22 | 打平规则和舍入写得不够具体（T04 提出） | **v1.0.1 澄清**：①"字典序"指对原始城市名逐个比较 Unicode 码点（JS 的 `<` 比较或者 Python 默认的字符串比较），**不用 `localeCompare`，不忽略大小写**；比较对象是途经城市名组成的序列。② `priceCents = Math.round(totalKm × 13)`，正数时是四舍五入。③距离平局的容差是 1e-6 km，按"每个候选都和当前最优比较"的方式处理。④只产生简单路径（不重复经过同一个城市） | 两个独立实现要做全量对拍，口径必须逐字一致 |
 | M-23 | T13a 提出的规范含糊点（v1.0.2 澄清） | ①**数字守卫的语境窗口重叠**："距离 X km，价格 Y 美元"这类短句里，每个数字归到**离它最近的单位词**；两边距离相同时，只要在价格或距离任一允许集合里就放行，不判违规。②**语言判断**：分母只算字母类字符，即拉丁字母，加上 CJK 汉字、假名、谚文；标点、数字、空白都不算。用户明确设置了 `preferred_language`（记忆，或者在本条消息里明说"用英文回答"）时，**以设置为准**，不再按比例判断。③**超时**：hands 的单次 execute 超时 10s；execute 带幂等键，可以按 platform 的规则重试，最多 2 次；单次请求 60s 和单次运行 120s **哪个先到就按哪个算**。④`save_preference` 收到非拉丁字母的城市值（比如"上海"）时，返回 `INVALID_INPUT`，`llmText` 提示"请传英文城市名"，不附候选。⑤模糊匹配的编辑距离用**受限版 Damerau–Levenshtein**（OSA）。⑥"上周"这类相对时间由 LLM 理解，`list_my_tickets` 不加日期参数，评测时宽松断言。⑦M-2 取消打码之后，A-02 §14.2 里"过程区不能有未打码数字"的那条红队断言作废 | 写给 T03、T08、T09 和评测 |
+| M-24 | W3 开工后提出的契约缺口（T03/T06/T08/T09，v1.1.0，新增导出、不改已有行为） | ① **`checkToolArgs(name, raw)`**（tools 入口）：用 TypeBox `Value.Check` 严格校验模型原始参数，不转换、不删字段；harness 的 `beforeToolCall`（CT-08）和 hands 的入参校验都用它，**两个服务都不加 typebox 依赖**。② **`signHandsToken` / `verifyHandsToken` / `handsTokenKid`**（server 入口，A-01 §5.3）：JWS EdDSA，kid = sha256(SPKI DER) 前 8 位，TTL 300s，时钟偏差 30s；gateway 签、hands 验，两边都改用契约版，删掉各自的本地实现。③ flight-core 可用 `node:fs`（只为读 `locations.db` 算 sha256，测试也可用）。④ `CityMatch` 增加可选 `score`（0..1）。⑤ **记忆 ID 用数据库的 uuid**，撤销 M-19 的 `m_` 前缀（数据归属以 A-01 §3 为准）。⑥ tickets-insert 护栏放行 `services/*/test/**`：测试夹具可以用 fb_owner 预置机票，运行时仍由数据库授权（CT-06）拦截。⑦ 模板文案和"已出票"正则 v1 先放在 harness 本地（agent 侧专用，不跨服务），不进契约 | 消除重复实现，避免 gateway/hands 两份 token 编解码漂移 |
 
 ---
 

@@ -7,7 +7,8 @@ import { git, repoRoot, zList } from './lib/git.ts';
 
 const INSERT_TICKETS = /\binsert\s+into\s+(?:"?app"?\s*\.\s*)?"?tickets"?(?![A-Za-z0-9_])/i;
 const SCANNED = ['apps', 'services', 'packages', 'eval', 'e2e', 'infra'];
-const ALLOWED = /^services\/booking\//;
+// M-24: services/*/test/** may INSERT tickets as fb_owner in fixtures; DB grants (CT-06) still block runtime roles.
+const ALLOWED = /^services\/(booking\/|[^/]+\/test\/)/;
 
 export function findTicketInserts(root: string): string[] {
   const files = zList(git(['ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', ...SCANNED], root));
