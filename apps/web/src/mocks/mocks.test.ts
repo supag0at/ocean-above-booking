@@ -103,7 +103,7 @@ describe('mock API behaves like the contract', () => {
     const t1 = await api.confirmQuote(q.quoteId);
     const t2 = await api.confirmQuote(q.quoteId);
     expect(t2.ticketId).toBe(t1.ticketId);
-    await api.deleteMemory('m_0001');
+    await api.deleteMemory('3f1c2a4e-0b7d-4e55-9a10-6c2d8e1f0001');
     expect(await api.getProfile()).toHaveLength(1);
     await api.deleteAllMemories();
     expect(await api.getProfile()).toHaveLength(0);

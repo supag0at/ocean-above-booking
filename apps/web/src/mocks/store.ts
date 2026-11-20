@@ -227,14 +227,14 @@ export function createStore(): MockStore {
 
   store.memories = [
     {
-      memoryId: 'm_0001',
+      memoryId: '3f1c2a4e-0b7d-4e55-9a10-6c2d8e1f0001',
       key: 'home_city',
       value: 'San José',
       createdAt: ts(-119),
       source: { sessionId: sid, seq: 1 },
     },
     {
-      memoryId: 'm_0002',
+      memoryId: '3f1c2a4e-0b7d-4e55-9a10-6c2d8e1f0002',
       key: 'preferred_language',
       value: 'zh',
       createdAt: ts(-119),
