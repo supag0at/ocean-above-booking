@@ -13,7 +13,12 @@ export interface CreateRedisOptions {
   /** logical secret holding the ACL password; default redis_password */
   readonly passwordSecret?: 'redis_password';
   readonly connectTimeoutMs?: number;
-  readonly commandTimeoutMs?: number;
+  /**
+   * Per-command timeout. Omitted: 2000, matching A-01 §2.5.
+   * `null` leaves the timeout unset. ioredis treats `0` as a number and fires immediately,
+   * so a BullMQ blocking connection must pass `null`, not `0`.
+   */
+  readonly commandTimeoutMs?: number | null;
   /** BullMQ workers need `null`; default is ioredis' own default (20) */
   readonly maxRetriesPerRequest?: number | null;
   readonly lazyConnect?: boolean;
@@ -21,14 +26,15 @@ export interface CreateRedisOptions {
 }
 
 export function createRedis(options: CreateRedisOptions): Redis {
+  const commandTimeout = options.commandTimeoutMs === undefined ? 2000 : options.commandTimeoutMs;
   const config = {
     host: options.host,
     port: options.port ?? 6379,
     username: options.username,
     password: options.secrets.get(options.passwordSecret ?? 'redis_password'),
-    // A-01 §2.5: Redis calls time out after 2 s
+    // A-01 §2.5: ordinary Redis calls time out after 2 s. A blocking connection passes null.
     connectTimeout: options.connectTimeoutMs ?? 2000,
-    commandTimeout: options.commandTimeoutMs ?? 2000,
+    ...(typeof commandTimeout === 'number' ? { commandTimeout } : {}),
     lazyConnect: options.lazyConnect ?? false,
     ...(options.maxRetriesPerRequest !== undefined ? { maxRetriesPerRequest: options.maxRetriesPerRequest } : {}),
     ...(options.connectionName !== undefined ? { connectionName: options.connectionName } : {}),

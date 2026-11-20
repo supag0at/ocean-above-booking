@@ -62,9 +62,11 @@ export async function main(): Promise<void> {
   const workerId = `h${randomBytes(6).toString('hex')}`;
   const redisOpts = { host: cfg.REDIS_HOST, port: cfg.REDIS_PORT, username: cfg.REDIS_USER, secrets } as const;
   const redis = createRedis({ ...redisOpts, connectionName: `harness-${workerId}` });
+  // BZPOPMIN blocks longer than the 2 s command timeout. `null` omits it; `0` times out immediately.
   const bullConn = createRedis({
     ...redisOpts,
     maxRetriesPerRequest: null,
+    commandTimeoutMs: null,
     connectionName: `harness-bull-${workerId}`,
   });
   const session = new HttpSessionApi(

@@ -217,3 +217,4 @@
 - 2026-11-20：**T14 已合并**（`5f0aff8`）。父会话重跑 `node scripts/verify-deploy.ts` 退出 0，并经 Caddy 用用户名登录得到 200 和 `fb_sid`。栈留在运行。父会话接受两处部署取舍，不改契约：
   - 容器自己请求 `/readyz` 会先被来源地址检查挡成 403 `FORBIDDEN_PEER`，所以健康检查把 200 和这个 403 都当成“进程在听”。它不能证明数据库仍然可用。要让 `/readyz` 真正反映依赖，得改服务代码，留给后续，不挡 T15。
   - `pg_hba` 的五条 `host` 与 A-01 §2.2 一致。额外的本机套接字规则和 IPv6 reject 是为了官方镜像的初始化和 `00-roles.sh` 能走通。
+- 2026-11-20：**T15 第一次没有跑通。** 登录通过；「从上海飞圣保罗」落库后 150 秒没有报价卡，DeepSeek 调用 0 次。harness 日志是 ioredis 的 `Command timed out`。原因是 BullMQ 的阻塞连接用了 2 秒 `commandTimeout`，而 `BZPOPMIN` 会堵得更久。`commandTimeoutMs: 0` 也不行：ioredis 只在该值是 number 时设超时，`0` 会立刻触发。父会话在 main 上让 `createRedis` 接受 `null`（不设置超时），harness 的队列连接传 `null`。普通 Redis 调用仍是 2 秒。这不改 A-01 对普通调用的约定。
