@@ -209,3 +209,7 @@
   6. preferred_language 不在 zh/en 内就视为无偏好。
   另：T03 提出的 `score` 保留 4 位小数，记为待补的契约澄清（M-25），W4 开始前写入 CONTRACT。
 - 2026-11-20：用户原话："现在进入联调。" 契约升到 v1.1.1，补上 M-25（score 保留 4 位小数，澄清，不改行为）。派发 W4 的第一段：T12a（只改 apps/web）和 T12b（只改 services 和 scripts/integration），各自一个 worktree。T14、T15、T13b 等联调完成后再派。
+- 2026-11-20：**联调已合并进 main**（`c94c0a0` T12b，`d92b4fe` T12a）。父会话在 `task/T12b` 上重跑 `node scripts/integration/run.ts`，退出码 0：Shanghai → São Paulo，确认 201，再次确认 200 `alreadyBooked`，仍一张票，`buildProfile` 读回 `home_city=Shanghai`。合并后的 main 上 `pnpm check` 9/9（966 个测试）。Opus 用量额度用尽，这两个任务改由当时可用的模型完成。
+  - 父会话接受的取舍（不改契约，留给 T14）：booking 增加可选 `SECRETS_DIR`，不设时仍是 `/run/secrets`；联调脚本在本机没有 `172.30.*` 网卡时把四个进程绑在 `127.0.0.1`；Redis ACL 沿用 gateway 测试里的规则，compose 的 T14 entrypoint 不动；`save_preference` 是出票之后的第二条用户消息。
+  - T12a 分支上的 lint 失败是 `61d665d` 留下的格式问题，已在 `16938ea` 修好，合并后 lint 通过。
+  - 下一步仍不派 T14、T15、T13b，等用户说继续。
