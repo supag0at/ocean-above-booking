@@ -1,5 +1,6 @@
 // Process entry point (container CMD: node services/gateway/src/main.ts). Non-secret config from the environment,
 // secrets from /run/secrets via FileSecretProvider (D-28). Any missing piece aborts startup (fail closed).
+import { createPrivateKey } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { createHttpClient } from '@fb/platform/http';
 import { createLogger } from '@fb/platform/log';
@@ -8,7 +9,6 @@ import { createRedis } from '@fb/platform/redis';
 import { FileSecretProvider } from '@fb/platform/secrets';
 import { buildGateway, type Gateway } from './app.ts';
 import { loadGatewayConfig } from './config.ts';
-import { createHandsTokenSigner } from './hands-token.ts';
 
 /** service-internal secret name -> mounted file name (A-01 §2.3 matrix, gateway column) */
 export const GATEWAY_SECRET_FILES = {
@@ -36,7 +36,7 @@ export async function startGateway(env: NodeJS.ProcessEnv = process.env): Promis
   });
   const redisOpts = { host: cfg.redis.host, port: cfg.redis.port, username: cfg.redis.user, secrets };
   const redis = createRedis({ ...redisOpts, connectionName: 'gateway' });
-  const subscriber = createRedis({ ...redisOpts, connectionName: 'gateway-sse', commandTimeoutMs: 0 });
+  const subscriber = createRedis({ ...redisOpts, connectionName: 'gateway-sse', commandTimeoutMs: 5000 });
   const queueConnection = createRedis({ ...redisOpts, connectionName: 'gateway-wake', maxRetriesPerRequest: null });
   const booking = createHttpClient({
     baseUrl: cfg.bookingUrl,
@@ -44,6 +44,8 @@ export async function startGateway(env: NodeJS.ProcessEnv = process.env): Promis
     retries: 0,
     headers: { authorization: `Bearer ${secrets.get('booking_service_token')}` },
   });
+  const handsTokenKey = createPrivateKey(secrets.get('hands_token_signing_key'));
+  if (handsTokenKey.asymmetricKeyType !== 'ed25519') throw new Error('hands_token_signing_key must be Ed25519');
   const gw = await buildGateway({
     pool,
     redis,
@@ -51,7 +53,7 @@ export async function startGateway(env: NodeJS.ProcessEnv = process.env): Promis
     queueConnection,
     log,
     booking,
-    handsToken: createHandsTokenSigner(secrets.get('hands_token_signing_key')),
+    handsTokenKey,
     harnessServiceToken: secrets.get('harness_service_token'),
     cookieSecret: secrets.get('cookie_secret'),
     publicOrigin: cfg.publicOrigin,

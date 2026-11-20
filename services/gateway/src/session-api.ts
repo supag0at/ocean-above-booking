@@ -4,6 +4,8 @@ import { timingSafeEqual } from 'node:crypto';
 import {
   EVENT_PAYLOAD_SCHEMAS,
   EmitEventRequest,
+  HANDS_TOKEN_TTL_SEC,
+  signHandsToken,
   GetEventsQuery,
   MAX_EMIT_BODY_BYTES,
   MAX_EVENTS_PAGE,
@@ -200,6 +202,8 @@ export function registerSessionApi(app: FastifyInstance, ctx: GatewayContext): v
     await fenceOk(ctx, id, fence, num(row.max_fence_seen));
     const active = num(row.last_user_seq) > num(row.consumed_up_to_seq) || row.open_run_id !== null;
     if (!active) throw new HttpError('SESSION_INACTIVE', 'no unconsumed input and no open run');
-    return ctx.handsToken.sign({ sid: id, uid: String(row.user_id) });
+    const nowSec = Math.floor(Date.now() / 1000);
+    const token = signHandsToken({ sid: id, uid: String(row.user_id), nowSec }, ctx.handsTokenKey);
+    return { token, expiresAt: new Date((nowSec + HANDS_TOKEN_TTL_SEC) * 1000).toISOString() };
   });
 }

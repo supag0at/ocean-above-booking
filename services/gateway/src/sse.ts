@@ -60,19 +60,19 @@ export class SseHub {
 
   async start(): Promise<void> {
     const sub = this.o.subscriber;
-    sub.on('pmessage', (_pattern: string, channel: string, message: string) => this.onSessionMessage(channel, message));
-    sub.on('message', (channel: string, message: string) => {
+    // Redis 7 ACL matches PSUBSCRIBE patterns literally against the channel rules, so the pattern must be exactly
+    // the ACL's `&sse:*` (A-01 §7.2); sse:session:{sid} and sse:logout are told apart here.
+    sub.on('pmessage', (_pattern: string, channel: string, message: string) => {
       if (channel === SSE_LOGOUT_CHANNEL) this.onLogout(message);
+      else if (channel.startsWith('sse:session:')) this.onSessionMessage(channel, message);
     });
-    await sub.psubscribe('sse:session:*');
-    await sub.subscribe(SSE_LOGOUT_CHANNEL);
+    await sub.psubscribe('sse:*');
   }
 
   async stop(): Promise<void> {
     for (const set of this.bySession.values()) for (const c of set) this.close(c);
     try {
       await this.o.subscriber.punsubscribe();
-      await this.o.subscriber.unsubscribe();
     } catch {
       /* already gone */
     }

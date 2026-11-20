@@ -8,7 +8,7 @@ import { AuthStore } from './auth.ts';
 import type { GatewayContext } from './context.ts';
 import type { Pool } from './db.ts';
 import { createDoorbell, createNotifier, type Doorbell } from './doorbell.ts';
-import type { HandsTokenSigner } from './hands-token.ts';
+import type { KeyObject } from 'node:crypto';
 import { registerPublicRoutes } from './public-routes.ts';
 import { INTERNAL_BODY_LIMIT, registerSessionApi } from './session-api.ts';
 import { SseHub } from './sse.ts';
@@ -24,7 +24,8 @@ export interface GatewayDeps {
   readonly queueConnection: Redis;
   readonly log: Logger;
   readonly booking: HttpClient;
-  readonly handsToken: HandsTokenSigner;
+  /** Ed25519 private key (hands_token_signing_key); tokens are signed with @fb/contracts/server signHandsToken */
+  readonly handsTokenKey: KeyObject;
   readonly harnessServiceToken: string;
   readonly cookieSecret: string;
   readonly publicOrigin: string;
@@ -70,7 +71,7 @@ export async function buildGateway(d: GatewayDeps): Promise<Gateway> {
     notifier,
     sse,
     booking: d.booking,
-    handsToken: d.handsToken,
+    handsTokenKey: d.handsTokenKey,
     harnessServiceToken: d.harnessServiceToken,
     publicOrigin: d.publicOrigin,
     cookieSecure: d.cookieSecure,
