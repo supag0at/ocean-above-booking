@@ -1,23 +1,24 @@
 // Acceptance 4 + 5 on a REAL redis:7 (lease / fence Lua scripts, fence read by the session stand-in, ephemeral
 // publishes): surplus doorbells never make the holder stale; a worker killed during tool execution is taken over and
-// its late writes are fenced out. Skipped (with a visible note) when no Redis is listening, see fakes/real-redis.ts.
+// its late writes are fenced out. Starts its own redis:7 container (D-74: no Docker means failure, not a skip).
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { Redis } from '@fb/platform/redis';
 import type { Ev } from '../src/events.ts';
 import { fenceKey, leaseKey } from '../src/lease.ts';
 import { danglingToolCalls, project, toolCallsOf } from '../src/projector.ts';
 import type { ChatRequest, ScriptedReply } from './fakes/llm-server.ts';
-import { connectRealRedis, REAL_REDIS_URL } from './fakes/real-redis.ts';
+import { startRealRedis } from './fakes/real-redis.ts';
 import { createWorld, onJob, type World } from './fakes/world.ts';
 
-let real: Redis | undefined;
+let real: Redis;
+let stopRedis: () => Promise<void>;
 let w: World | undefined;
 const used: string[] = [];
 
 beforeAll(async () => {
-  real = await connectRealRedis();
-  if (real === undefined)
-    console.warn(`[recovery.redis.test] real Redis at ${REAL_REDIS_URL.host} not reachable: cases skipped`);
+  const started = await startRealRedis();
+  real = started.redis;
+  stopRedis = started.stop;
 });
 afterEach(async () => {
   if (w !== undefined) {
@@ -27,8 +28,9 @@ afterEach(async () => {
   }
 });
 afterAll(async () => {
-  if (real !== undefined && used.length > 0) await real.del(...used.flatMap((s) => [leaseKey(s), fenceKey(s)]));
-  real?.disconnect();
+  if (used.length > 0) await real.del(...used.flatMap((s) => [leaseKey(s), fenceKey(s)]));
+  real.disconnect();
+  await stopRedis();
 });
 
 const P = (e: Ev): Record<string, unknown> => e.payload as unknown as Record<string, unknown>;
@@ -46,8 +48,7 @@ async function until(cond: () => boolean, ms = 5000): Promise<void> {
 }
 
 describe('lease, fence and crash takeover on real redis:7', () => {
-  it('5 surplus doorbells during a run never make the holder stale', async (ctx) => {
-    if (real === undefined) return ctx.skip();
+  it('5 surplus doorbells during a run never make the holder stale', async () => {
     w = await createWorld({ realRedis: real });
     const sid = w.session.createSession('en');
     used.push(sid);
@@ -74,8 +75,7 @@ describe('lease, fence and crash takeover on real redis:7', () => {
     expect(await real.exists(leaseKey(sid))).toBe(0); // released at the end of the job
   });
 
-  it('killed during tool execution: another worker takes over, pairing stays complete, the stale worker is fenced out', async (ctx) => {
-    if (real === undefined) return ctx.skip();
+  it('killed during tool execution: another worker takes over, pairing stays complete, the stale worker is fenced out', async () => {
     w = await createWorld({ realRedis: real });
     const sid = w.session.createSession('zh');
     used.push(sid);

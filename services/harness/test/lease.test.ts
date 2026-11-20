@@ -1,20 +1,22 @@
 // Lease + fence (A-02 §3.2, §14.1 "租约"): the same contract suite runs against the in-memory FakeRedis and a REAL
-// redis:7 (docker; T09_REDIS_URL, default redis://default:t09-local-test@127.0.0.1:6390). The real-Redis half is
-// skipped (with a visible note) when nothing is listening, so `pnpm check` still runs on a machine without docker.
-//   docker run -d --rm --name t09-redis -p 127.0.0.1:6390:6379 redis:7 redis-server --requirepass t09-local-test
+// redis:7. The real half starts its own container (D-74: no Docker means the suite fails, it does not skip).
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Redis } from '@fb/platform/redis';
 import { fenceKey, LeaseKeeper, leaseKey, LeaseStore, type LeaseRedis } from '../src/lease.ts';
-import { connectRealRedis, REAL_REDIS_URL } from './fakes/real-redis.ts';
+import { startRealRedis } from './fakes/real-redis.ts';
 import { FakeRedis } from './fakes/redis.ts';
 
 let real: Redis | undefined;
+let stopRedis: (() => Promise<void>) | undefined;
 beforeAll(async () => {
-  real = await connectRealRedis();
-  if (real === undefined)
-    console.warn(`[lease.test] real Redis at ${REAL_REDIS_URL.host} not reachable: real-Redis cases skipped`);
+  const started = await startRealRedis();
+  real = started.redis;
+  stopRedis = started.stop;
 });
-afterAll(() => real?.disconnect());
+afterAll(async () => {
+  real?.disconnect();
+  await stopRedis?.();
+});
 
 interface Backend {
   name: string;
@@ -34,7 +36,7 @@ const backends: Backend[] = [
     name: 'real redis:7',
     redis: () => real as unknown as LeaseRedis,
     getFence: async (s) => Number((await real?.get(fenceKey(s))) ?? 0),
-    available: () => real !== undefined,
+    available: () => true,
   },
 ];
 
