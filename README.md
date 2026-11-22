@@ -1,62 +1,34 @@
-# Ocean Above — flight booking (monorepo)
+# Ocean Above
 
-Development environment only. Design, contracts and decisions live in `docs/`.
+自然语言订机票。城市、航线和价格只来自 `locations.db`。报价由确定性代码计算，用户在报价卡上点击确认之后才会出票。
 
-## Requirements
+线上演示：https://g0at.top
 
-- Node 24 LTS (D-21; `.node-version`). Node ≥ 22.18 can run the tooling, but production images use Node 24.
-- pnpm 12 (`packageManager` in `package.json`)
-- git, Docker with Compose v2
+打开后只填用户名即可登录。这台运行 Docker 的电脑休眠或关机后，这个地址不可用。
 
-## First setup
+## 设计文档
 
-```sh
-pnpm install --frozen-lockfile        # install scripts are disabled (ignoreScripts, H-09)
-git config core.hooksPath .githooks   # enable the guardrail hooks (once per clone; worktrees inherit it)
-pnpm check                            # typecheck, lint, depcruise, test, hash, secrets, manifest, supply, tickets-insert
-```
+| 文档 | 内容 |
+|---|---|
+| [docs/final/01-前后端.md](docs/final/01-前后端.md) | 架构与数据流、航线距离和价格、确认出票、局限 |
+| [docs/final/02-agent与评测.md](docs/final/02-agent与评测.md) | 工具及理由、数字如何显示、确认机制、评测结果、局限 |
 
-Supply-chain settings (`ignoreScripts`, `minimumReleaseAge`, exact versions) are in `pnpm-workspace.yaml`;
-pnpm 12 does not read them from `.npmrc` (S-16). Dependencies are added only by the parent session.
+过程设计、契约和决策在 `docs/design/`、`docs/contracts/`、`docs/adr/`。评测原始结果在 `eval/reports/`。
 
-## Working on a task
+对话记录另打包交付，不在这个仓库里。
 
-```sh
-pnpm new-worktree T03        # ../flight-booking-wt/T03 on branch task/T03 (from main)
-pnpm new-worktree T03/routes # ../flight-booking-wt/T03--routes on task/T03/routes (from task/T03)
-```
+## 本地运行
 
-Each task branch `task/<ID>[/<sub>]` may only change the paths in `docs/tasks/<ID>.manifest` (read from `main`).
-The pre-commit hook rejects:
-
-- changes to protected paths on any branch other than `main` (contracts, ADRs, planning, lockfile, root
-  dependency sections, `.npmrc`, `pnpm-workspace.yaml`, `locations.db`, task manifests);
-- files outside the manifest, and manifests that mix frontend (`apps/web`) and backend paths (R-U1);
-- anything that looks like a secret, and any `.env` / `infra/secrets/*` file;
-- a modified `locations.db`.
-
-Before merging a task branch, run the gate from the `main` checkout, so main's guardrail code is used:
+需要 Node 24、pnpm 12、Docker Compose v2。
 
 ```sh
-node scripts/manifest.ts --branch task/T03
+pnpm install --frozen-lockfile
+git config core.hooksPath .githooks
 ```
 
-## Local secrets
+密钥放在 `infra/secrets/`（已被 gitignore）。模板是 `infra/secrets/*.example`。DeepSeek 的 key 从本机 `.env` 写进 `infra/secrets/deepseek_api_key`，不要把 `.env` 提交，也不要在 compose 里用 `${...}` 插入密钥。
 
-Real secret files go in `infra/secrets/<name>` (gitignored); templates are `infra/secrets/*.example`.
-Compose mounts them as file-based secrets (D-28); they are never environment variables.
-
-```sh
-docker compose -f infra/compose/compose.yml config
-```
-
-## 部署
-
-公网域名是 `https://g0at.top`。非机密站点配置在 `infra/compose/site.env`：`SITE_ADDRESS=:80`（源站仍是 HTTP）、`PUBLIC_ORIGIN=https://g0at.top`、`COOKIE_SECURE=1`。浏览器看到的是 Cloudflare 的证书。隧道配置在 `infra/compose/compose.tunnel.yml`，不改那份被测试冻结的八容器 compose。
-
-机密只放在 gitignore 的 `infra/secrets/`。根目录 `.env` 里的 DeepSeek key 只写入 `deepseek_api_key`，不要把 `.env` 拷进部署目录，也不要在 compose 里用 `${...}` 插值任何机密。
-
-Windows 上生成机密（不打印内容）：
+Windows：
 
 ```powershell
 powershell -File infra/vm/init.ps1 -EnvFile C:\path\to\.env
@@ -68,30 +40,39 @@ Linux / Git Bash：
 bash infra/vm/init.sh /path/to/.env
 ```
 
-启动（项目名是 compose 文件里的 `ocean-above`，宿主机端口保持 80 和 443）：
+当前仓库里的 `infra/compose/site.env` 面向线上：`PUBLIC_ORIGIN=https://g0at.top`，`COOKIE_SECURE=1`。只在本机用 HTTP 时，把这两项改成 `http://127.0.0.1` 和 `0`，登录请求的 `Origin` 也要一致。
 
 ```sh
 docker compose -f infra/compose/compose.yml --env-file infra/compose/site.env up --build -d
+node scripts/verify-deploy.ts
 ```
 
-加上隧道（授权并生成 `infra/cloudflared/config.yml` 和 `infra/secrets/cloudflare_tunnel_credentials.json` 之后）：
+浏览器打开 `site.env` 里的 `PUBLIC_ORIGIN`。登录是 `POST /api/v1/auth/login`，body 只有 `username`。
+
+公网隧道是另一份 compose，不改被测试固定的八个服务。授权并放好 `infra/cloudflared/config.yml` 和 `infra/secrets/cloudflare_tunnel_credentials.json` 之后：
 
 ```sh
 docker compose -f infra/compose/compose.yml -f infra/compose/compose.tunnel.yml --env-file infra/compose/site.env up -d
 ```
 
-对外地址是 `https://g0at.top/`。登录请求的 `Origin` 必须是 `https://g0at.top`。
+现在的 https://g0at.top 由宿主机上的 cloudflared 转到本机 80 端口，不是由上面这个容器提供的。
 
-看健康和一次性迁移是否退出 0：
-
-```sh
-docker compose -f infra/compose/compose.yml --env-file infra/compose/site.env ps
-```
-
-验收：
+## 检查
 
 ```sh
-node scripts/verify-deploy.ts
+pnpm check
+node --experimental-strip-types --disable-warning=ExperimentalWarning eval/runner/cli.ts deterministic
 ```
 
-浏览器打开 `http://127.0.0.1/`。登录是 `POST http://127.0.0.1/api/v1/auth/login`，`Origin: http://127.0.0.1`，body 只有用户名。不要为了验收去调用 DeepSeek。
+`pnpm check` 包含类型、lint、依赖边界、测试、`locations.db` 哈希和密钥扫描。确定性评测不调用模型。带模型的 agent 评测会花钱，结果和未跑条目写在 `eval/reports/T13b.md`。
+
+## 开发约定
+
+任务在独立 worktree 里做，分支名 `task/<ID>`。该分支只能改 `docs/tasks/<ID>.manifest` 列出的路径，前后端不能由同一次任务一起改。
+
+```sh
+pnpm new-worktree T03
+node scripts/manifest.ts --branch task/T03
+```
+
+依赖只在主分支上加。`locations.db`、契约、lockfile 和 `infra/secrets/` 里的真实密钥都不能由任务分支改动。
