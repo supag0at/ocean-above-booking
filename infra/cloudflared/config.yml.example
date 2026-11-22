@@ -1,0 +1,8 @@
+# Copy to config.yml after `cloudflared tunnel create`. The UUID is not a secret.
+# credentials-file is the path inside the cloudflared container.
+tunnel: 00000000-0000-0000-0000-000000000000
+credentials-file: /etc/cloudflared/credentials.json
+ingress:
+  - hostname: g0at.top
+    service: http://caddy:80
+  - service: http_status:404

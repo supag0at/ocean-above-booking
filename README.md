@@ -52,7 +52,7 @@ docker compose -f infra/compose/compose.yml config
 
 ## 部署
 
-本机没有域名。非机密站点配置在 `infra/compose/site.env`（`SITE_ADDRESS=:80`、`PUBLIC_ORIGIN=http://127.0.0.1`、`COOKIE_SECURE=0`）。拿到域名之后只改这三个值，不改代码。
+公网域名是 `https://g0at.top`。非机密站点配置在 `infra/compose/site.env`：`SITE_ADDRESS=:80`（源站仍是 HTTP）、`PUBLIC_ORIGIN=https://g0at.top`、`COOKIE_SECURE=1`。浏览器看到的是 Cloudflare 的证书。隧道配置在 `infra/compose/compose.tunnel.yml`，不改那份被测试冻结的八容器 compose。
 
 机密只放在 gitignore 的 `infra/secrets/`。根目录 `.env` 里的 DeepSeek key 只写入 `deepseek_api_key`，不要把 `.env` 拷进部署目录，也不要在 compose 里用 `${...}` 插值任何机密。
 
@@ -73,6 +73,14 @@ bash infra/vm/init.sh /path/to/.env
 ```sh
 docker compose -f infra/compose/compose.yml --env-file infra/compose/site.env up --build -d
 ```
+
+加上隧道（授权并生成 `infra/cloudflared/config.yml` 和 `infra/secrets/cloudflare_tunnel_credentials.json` 之后）：
+
+```sh
+docker compose -f infra/compose/compose.yml -f infra/compose/compose.tunnel.yml --env-file infra/compose/site.env up -d
+```
+
+对外地址是 `https://g0at.top/`。登录请求的 `Origin` 必须是 `https://g0at.top`。
 
 看健康和一次性迁移是否退出 0：
 
