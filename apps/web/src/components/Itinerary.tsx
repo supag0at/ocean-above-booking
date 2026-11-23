@@ -8,12 +8,14 @@ export function Itinerary({ quote }: { quote: Quote }) {
   const direct = quote.transferCities.length === 0;
   return (
     <div className="itinerary">
-      <p className="route-line" data-testid="route-line">
-        {[quote.from, ...quote.transferCities, quote.to].join(' → ')}
-      </p>
-      <p className="transfer-note" data-testid="transfer-note">
-        {direct ? t('quote.direct') : quote.transferCities.map((c) => t('quote.transferAt', { city: c })).join('；')}
-      </p>
+      <div className="itinerary-head">
+        <p className="route-line" data-testid="route-line">
+          {[quote.from, ...quote.transferCities, quote.to].join(' → ')}
+        </p>
+        <p className="transfer-note" data-testid="transfer-note">
+          {direct ? t('quote.direct') : quote.transferCities.map((c) => t('quote.transferAt', { city: c })).join('；')}
+        </p>
+      </div>
       <ol className="legs">
         {quote.legs.map((leg, i) => (
           <li key={`${leg.from}>${leg.to}>${i}`} data-testid="leg">

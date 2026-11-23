@@ -28,12 +28,19 @@ export function ProcessArea({ run }: { run: RunItem }) {
   return (
     <section className="process" data-testid="process-area" data-expanded={expanded} aria-label={t('process.title')}>
       <header className="process-head">
-        <span className="process-title">
-          {run.finished ? t('process.collapsed', { n: run.processCount }) : t('process.title')}
-        </span>
-        <span className="process-disclaimer"> · {t('process.disclaimer')}</span>
+        <div className="process-head-main">
+          <span className="process-title">
+            {run.finished ? t('process.collapsed', { n: run.processCount }) : t('process.title')}
+          </span>
+          <span className="process-disclaimer"> · {t('process.disclaimer')}</span>
+        </div>
         {run.finished && (
-          <button type="button" className="link-button" aria-expanded={expanded} onClick={() => setUserOpen(!expanded)}>
+          <button
+            type="button"
+            className="link-button process-toggle"
+            aria-expanded={expanded}
+            onClick={() => setUserOpen(!expanded)}
+          >
             {expanded ? t('process.collapse') : t('process.expand')} {expanded ? '▾' : '▸'}
           </button>
         )}

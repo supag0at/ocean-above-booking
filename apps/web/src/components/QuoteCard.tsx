@@ -100,15 +100,33 @@ export function QuoteCard({ quoteId, booked: bookedFromEvent, failedCode }: Prop
 
   return (
     <article className="card quote-card" data-testid="quote-card" data-quote-id={quoteId}>
-      <h3>{t('quote.title')}</h3>
+      <div className="card-header">
+        <h3>{t('quote.title')}</h3>
+        {booked && <span className="status-pill booked-pill">✓ {t('quote.booked')}</span>}
+      </div>
       <Itinerary quote={quote} />
       <p className="pricing-note">{t('quote.pricingNote')}</p>
       {booked ? (
-        <p className="booked" data-testid="booked-state">
-          ✓ {t('quote.booked')} · {t('quote.ticketNo')} <strong>{booked.ticketNo}</strong>
-        </p>
+        <div className="quote-footer quote-footer-booked">
+          <p className="booked" data-testid="booked-state">
+            ✓ {t('quote.booked')} · {t('quote.ticketNo')} <strong>{booked.ticketNo}</strong>
+          </p>
+        </div>
       ) : (
-        <>
+        <div className="quote-footer">
+          <div className="quote-footer-meta">
+            <p className="fine-print">{t('quote.onlyThisButton')}</p>
+            {polling && (
+              <p className="hint" role="status">
+                {errorText(t, 'BOOKING_UNAVAILABLE')}
+              </p>
+            )}
+            {shownError && (
+              <p className="error" role="alert" data-testid="quote-error">
+                {errorText(t, shownError)}
+              </p>
+            )}
+          </div>
           <button
             type="button"
             className="primary"
@@ -118,18 +136,7 @@ export function QuoteCard({ quoteId, booked: bookedFromEvent, failedCode }: Prop
           >
             {pending || polling ? t('quote.confirming') : t('quote.confirm')}
           </button>
-          {polling && (
-            <p className="hint" role="status">
-              {errorText(t, 'BOOKING_UNAVAILABLE')}
-            </p>
-          )}
-          {shownError && (
-            <p className="error" role="alert" data-testid="quote-error">
-              {errorText(t, shownError)}
-            </p>
-          )}
-          <p className="fine-print">{t('quote.onlyThisButton')}</p>
-        </>
+        </div>
       )}
     </article>
   );

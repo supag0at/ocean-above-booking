@@ -35,26 +35,39 @@ export function HistoryPage() {
   }
   const lng = i18n.language === 'en' ? 'en-US' : 'zh-CN';
   return (
-    <section>
-      <h1>{t('history.title')}</h1>
-      {items.length === 0 && <p className="hint">{t('history.empty')}</p>}
-      <ul className="list">
-        {items.map((s) => (
-          <li key={s.id}>
-            <Link to={`/chat/${encodeURIComponent(s.id)}`} data-testid="session-link">
-              <span className="list-title">{s.title ?? t('history.untitled')}</span>
-              <span className="list-meta">
-                {t('history.updatedAt')} {new Date(s.updatedAt).toLocaleString(lng)}
-                {s.status !== 'idle' ? ` · ${t(`chat.status.${s.status}`)}` : ''}
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+    <section className="page-container">
+      <header className="page-header">
+        <h1>{t('history.title')}</h1>
+      </header>
+      {items.length === 0 ? (
+        <div className="panel empty-panel">
+          <p className="hint">{t('history.empty')}</p>
+        </div>
+      ) : (
+        <div className="panel">
+          <ul className="list history-list">
+            {items.map((s) => (
+              <li key={s.id}>
+                <Link to={`/chat/${encodeURIComponent(s.id)}`} data-testid="session-link" className="history-row">
+                  <span className="list-title">{s.title ?? t('history.untitled')}</span>
+                  <span className="list-meta">
+                    {s.status !== 'idle' && <span className="status-pill">{t(`chat.status.${s.status}`)}</span>}
+                    <span>
+                      {t('history.updatedAt')} {new Date(s.updatedAt).toLocaleString(lng)}
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {q.hasNextPage && (
-        <button type="button" onClick={() => void q.fetchNextPage()} disabled={q.isFetchingNextPage}>
-          {t('history.loadMore')}
-        </button>
+        <div className="load-more-row">
+          <button type="button" onClick={() => void q.fetchNextPage()} disabled={q.isFetchingNextPage}>
+            {t('history.loadMore')}
+          </button>
+        </div>
       )}
     </section>
   );

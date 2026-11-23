@@ -28,11 +28,13 @@ export function LoginPage() {
 
   return (
     <div className="login">
-      <form className="card" onSubmit={submit}>
-        <h1>{t('login.title')}</h1>
-        <p className="hint">{t('login.subtitle')}</p>
-        <label>
-          {t('login.username')}
+      <form className="card login-card" onSubmit={submit}>
+        <div className="login-header">
+          <h1>{t('login.title')}</h1>
+          <p className="hint">{t('login.subtitle')}</p>
+        </div>
+        <label className="field">
+          <span>{t('login.username')}</span>
           <input value={username} onChange={(e) => setUsername(e.target.value)} maxLength={64} autoFocus />
         </label>
         {login.isError && (
@@ -40,7 +42,7 @@ export function LoginPage() {
             {errorTextOf(t, login.error)}
           </p>
         )}
-        <button type="submit" className="primary" disabled={login.isPending || !username.trim()}>
+        <button type="submit" className="primary login-submit" disabled={login.isPending || !username.trim()}>
           {t('login.submit')}
         </button>
       </form>

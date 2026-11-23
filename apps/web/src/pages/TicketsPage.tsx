@@ -7,17 +7,32 @@ import { api } from '../api/client.ts';
 import { Itinerary } from '../components/Itinerary.tsx';
 import { errorTextOf } from '../components/errors.ts';
 
-function TicketBody({ ticket }: { ticket: TicketView }) {
+function TicketBody({ ticket, detailLink }: { ticket: TicketView; detailLink?: boolean }) {
   const { t, i18n } = useTranslation();
+  const formattedDate = new Date(ticket.bookedAt).toLocaleString(i18n.language === 'en' ? 'en-US' : 'zh-CN');
   return (
     <>
-      <p>
-        {t('ticket.ticketNo')}: <strong>{ticket.ticketNo}</strong>
-      </p>
+      <div className="card-header">
+        <span className="ticket-no-chip">
+          {t('ticket.ticketNo')}: <strong>{ticket.ticketNo}</strong>
+        </span>
+        {!detailLink && (
+          <span className="booked-at">
+            {t('ticket.bookedAt')}: {formattedDate}
+          </span>
+        )}
+      </div>
       <Itinerary quote={ticket.itinerary} />
-      <p className="booked-at">
-        {t('ticket.bookedAt')}: {new Date(ticket.bookedAt).toLocaleString(i18n.language === 'en' ? 'en-US' : 'zh-CN')}
-      </p>
+      {detailLink && (
+        <div className="ticket-footer">
+          <span className="booked-at">
+            {t('ticket.bookedAt')}: {formattedDate}
+          </span>
+          <Link to={`/tickets/${encodeURIComponent(ticket.ticketId)}`} className="ticket-link">
+            {t('ticket.view')} →
+          </Link>
+        </div>
+      )}
     </>
   );
 }
@@ -39,19 +54,29 @@ export function TicketsPage() {
     );
   const tickets = q.data.pages.flatMap((p) => p.items);
   return (
-    <section>
-      <h1>{t('tickets.title')}</h1>
-      {tickets.length === 0 && <p className="hint">{t('tickets.empty')}</p>}
-      {tickets.map((tk) => (
-        <article key={tk.ticketId} className="card" data-testid="ticket-item">
-          <TicketBody ticket={tk} />
-          <Link to={`/tickets/${encodeURIComponent(tk.ticketId)}`}>{tk.ticketNo}</Link>
-        </article>
-      ))}
+    <section className="page-container page-wide">
+      <header className="page-header">
+        <h1>{t('tickets.title')}</h1>
+      </header>
+      {tickets.length === 0 ? (
+        <div className="panel empty-panel">
+          <p className="hint">{t('tickets.empty')}</p>
+        </div>
+      ) : (
+        <div className="tickets-grid">
+          {tickets.map((tk) => (
+            <article key={tk.ticketId} className="card ticket-item-card" data-testid="ticket-item">
+              <TicketBody ticket={tk} detailLink />
+            </article>
+          ))}
+        </div>
+      )}
       {q.hasNextPage && (
-        <button type="button" onClick={() => void q.fetchNextPage()} disabled={q.isFetchingNextPage}>
-          {t('tickets.loadMore')}
-        </button>
+        <div className="load-more-row">
+          <button type="button" onClick={() => void q.fetchNextPage()} disabled={q.isFetchingNextPage}>
+            {t('tickets.loadMore')}
+          </button>
+        </div>
       )}
     </section>
   );
@@ -69,8 +94,8 @@ export function TicketDetailPage() {
       </p>
     );
   return (
-    <section>
-      <p>
+    <section className="page-container">
+      <p className="back-row">
         <Link to="/tickets">← {t('nav.tickets')}</Link>
       </p>
       <article className="card" data-testid="ticket-detail">

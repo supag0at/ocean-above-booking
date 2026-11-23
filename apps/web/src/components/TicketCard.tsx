@@ -12,23 +12,33 @@ export function TicketCard({ ticketId, ticketNo }: { ticketId: string; ticketNo:
   const ticket = query.data;
   return (
     <article className="card ticket-card system" data-testid="ticket-card">
-      <span className="badge">{t('ticket.system')}</span>
-      <h3>✓ {t('ticket.issued')}</h3>
-      <p>
-        {t('ticket.ticketNo')}: <strong data-testid="ticket-no">{ticketNo}</strong>
-      </p>
+      <div className="card-header">
+        <div className="ticket-card-title">
+          <h3 className="booked">✓ {t('ticket.issued')}</h3>
+          <span className="badge">{t('ticket.system')}</span>
+        </div>
+        <span className="ticket-no-chip">
+          {t('ticket.ticketNo')}: <strong data-testid="ticket-no">{ticketNo}</strong>
+        </span>
+      </div>
       {ticket ? (
-        <>
-          <Itinerary quote={ticket.itinerary} />
-          <p className="booked-at">
-            {t('ticket.bookedAt')}:{' '}
-            {new Date(ticket.bookedAt).toLocaleString(i18n.language === 'en' ? 'en-US' : 'zh-CN')}
-          </p>
-        </>
+        <Itinerary quote={ticket.itinerary} />
       ) : query.isPending ? (
         <p className="hint">{t('common.loading')}</p>
       ) : null}
-      <Link to={`/tickets/${encodeURIComponent(ticketId)}`}>{t('ticket.view')}</Link>
+      <div className="ticket-footer">
+        {ticket ? (
+          <span className="booked-at">
+            {t('ticket.bookedAt')}:{' '}
+            {new Date(ticket.bookedAt).toLocaleString(i18n.language === 'en' ? 'en-US' : 'zh-CN')}
+          </span>
+        ) : (
+          <span />
+        )}
+        <Link to={`/tickets/${encodeURIComponent(ticketId)}`} className="ticket-link">
+          {t('ticket.view')} →
+        </Link>
+      </div>
     </article>
   );
 }
